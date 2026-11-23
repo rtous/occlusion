@@ -17,7 +17,7 @@ Per person: **occlusion mask = amodal mask − modal mask**
 | Step | Old | New | Why |
 |---|---|---|---|
 | Modal mask (per instance) | People Segmentation (binary) | **YOLO11-seg** (ultralytics) for instances + **SAM 2** box-prompted refinement | pip-installable, robust, per-instance masks (needed for human–human occlusion) |
-| 3D body → amodal mask | OpenPose + SMPLify-X | **Multi-HMR** (multi-person SMPL-X + camera, single pass); fallback **HMR2.0 / 4D-Humans**; alternative **SAM 3D Body** (no SMPL license) | no slow optimisation fitting, one forward pass |
+| 3D body → amodal mask | OpenPose + SMPLify-X | **SAM 3D Body** (final: per person, prompted with box + mask, MHR mesh); **Multi-HMR** (multi-person SMPL-X, single pass) as second person detector and comparison | no slow optimisation fitting; SAM 3D Body fits best |
 | Projection | — | **pyrender** (EGL) or a small z-buffer rasteriser | per-person silhouette + joint depth/ID map |
 | Mesh ↔ mask matching | implicit | Hungarian matching on IoU, with cross-model detection selection (low thresholds) and SAM fallback | simple, reliable; recovers heavily occluded people |
 | Background | SD v1.4 inpainting | **LaMa** (`big-lama.pt` via TorchScript) | fast, deterministic, no prompts |
@@ -55,7 +55,7 @@ Temporary files and checkpoints go in `/content/drive/MyDrive/occlusion_work/`.
 
 1. Environment: GPU runtime, `setup_colab.sh`, weights cached on Drive.
 2. Modal masks: YOLO11 + SAM 2 on sample images, saved for a visual check.
-3. 3D bodies: Multi-HMR (or HMR2.0) meshes rendered and checked for alignment with the people.
+3. 3D bodies: Multi-HMR first, then SAM 3D Body (final); meshes rendered and checked for alignment with the people.
 4. Occlusion masks: matching, object vs. human labelling, visual outputs.
 5. Inpainting and the final de-occlusion composite.
 6. Synthetic evaluation (IoU numbers) and the figure grid.
@@ -64,5 +64,5 @@ Commit and push after each step that works.
 
 ## Decisions taken
 
-- Body model: SMPL-X files (on Drive) with Multi-HMR. SAM 3D Body remains a possible future replacement.
+- Body model: SAM 3D Body (main method, 2026-11-23); Multi-HMR (SMPL-X files on Drive) as second detector and comparison.
 - GPU runtime (T4); everything also runs on CPU, slowly.

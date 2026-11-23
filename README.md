@@ -18,12 +18,15 @@ from google.colab import drive; drive.mount('/content/drive')
 ```bash
 cd /content/occlusion
 bash setup_colab.sh   # once per session; everything heavy is cached on Drive
-bash run_all.sh       # all steps, resumable
+bash run_all.sh       # all steps for both body models, resumable; then the paper figures
+bash paper/build.sh   # paper/main.pdf
 ```
+
+`OCC_BODY=sam3d` (default, main method) or `OCC_BODY=multihmr` selects the body model and its output folders.
 
 Individual steps: `scripts/run_detect.py`, `run_occlusion.py`, `run_compose.py`, `make_synthetic_eval.py`, `eval.py` (`--open-frac`, `--dilate-frac` to re-score cached outputs).
 
-Body models (licensed, not committed): `basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl` and `SMPLX_NEUTRAL.npz` in `/content/drive/MyDrive/occlusion_work/`.
+Body models and checkpoints (licensed, not committed): `basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl` and `SMPLX_NEUTRAL.npz` in `/content/drive/MyDrive/occlusion_work/`; the SAM 3D Body checkpoint (gated on Hugging Face, `facebook/sam-3d-body-vith`) in `occlusion_work/weights/sam-3d-body-vith`.
 
 ## Where we are (plain-language summary)
 
@@ -35,20 +38,20 @@ To find the parts of a person hidden behind something, we estimate the person's 
 | Step | Old paper (`old_paper.tex`) | Now | What changed in practice |
 |---|---|---|---|
 | Visible body (modal) | Binary People Segmentation (U-Net). One mask for *all* people together. | YOLO11 + SAM 2. One mask **per person**. | We can now tell people apart, so we know *who* hides *whom*. |
-| Whole body (amodal) | OpenPose keypoints + SMPLify-X fitting, a slow per-person optimisation. ORCNN was also tried and discarded (noisy masks). | Multi-HMR: all people's 3D bodies (SMPL-X) in one network pass. | No fitting, no OpenPose, one model; same idea of projecting the 3D body. |
+| Whole body (amodal) | OpenPose keypoints + SMPLify-X fitting, a slow per-person optimisation. ORCNN was also tried and discarded (noisy masks). | SAM 3D Body: one 3D body per person, prompted with that person's mask (Multi-HMR, which reconstructs everyone in one pass, helps to find missed people and is the faster alternative). | No fitting, no OpenPose; same idea of projecting the 3D body. |
 | Human vs. object occlusion | Done by superimposing the front person's mesh. | Automatic: each hidden pixel is labelled *hidden by a person* (another body is in front) or *hidden by an object*. | Same idea, now automatic and per pixel. |
 | Background | Stable Diffusion v1.4 inpainting. | LaMa inpainting. | Faster, no prompts, deterministic. |
 | Final composite (cartoon-style) | Meshes over the background, hidden parts erased. | Same; each pixel shows the nearest body that is not hidden there. | Same output. |
 | Evaluation | Visual only, 30 movie frames. | Visual (COCO images) **plus a number**: a synthetic test where we paste occluders over fully visible people, so the true occlusion mask is known. | The old paper had no quantitative result. |
 
 ### What works
-- **The whole pipeline runs end to end**, from a photo to occlusion masks and the de-occluded composite, including on CPU (slowly).
+- **The whole pipeline runs end to end**, from a photo to occlusion masks and the de-occluded composite (GPU; the Multi-HMR variant also runs on CPU, slowly).
 - **Visible masks are good.** YOLO and SAM agree closely (about 0.9 overlap).
 - **3D bodies line up with the people**, especially heads and torsos.
 - **Real occlusions are found.** In a street photo, a man behind a sign pole and a pedestrian behind a bin are cut correctly. In a group photo of 13 kids, those standing behind others get their hidden parts marked as *hidden by a person*.
 
 ### What doesn't work well yet
-- **False occlusions from imperfect 3D poses.** When the 3D body's arm or leg is slightly off, the part of the mesh that sticks out beyond the real person looks "hidden" even though nothing hides it. A morphological opening (tuned on the benchmark) removes most thin slivers, but this remains the main weakness: the mesh overlaps the real body with only ~0.7 IoU.
+- **False occlusions from imperfect 3D poses.** When the 3D body's arm or leg is slightly off, the part of the mesh that sticks out beyond the real person looks "hidden" even though nothing hides it. A morphological opening (tuned on the benchmark) removes most thin slivers, but this remains the main weakness: the mesh overlaps the real body with ~0.8 IoU with SAM 3D Body (~0.7 with Multi-HMR).
 - **Tight crops** (half-body shots) give rougher poses, e.g. a wrong arm in `zidane.jpg`.
 - Small objects the segmenter includes in a person (trophies, rackets) leave little gaps.
 - LaMa leaves dark smudges when the hole (all people together) is very large; mostly hidden by the meshes in the composite.
