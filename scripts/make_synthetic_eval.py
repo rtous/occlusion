@@ -23,6 +23,8 @@ rng = np.random.default_rng(0)
 src = sorted((IMAGES / "single").glob("*.jpg"))
 out = WORK / "synth"
 out.mkdir(parents=True, exist_ok=True)
+if any(out.glob("*.npz")) and "--force" not in sys.argv:
+    sys.exit(f"{out} already populated (use --force to regenerate)")
 seg = ModalSegmenter()
 
 # 1. visible mask of the main person in each source image

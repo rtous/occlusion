@@ -10,7 +10,7 @@ mkdir -p "$W/multihmr"
 
 python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 # simple-lama-inpainting is NOT used: it pins numpy 1.26, which fails to build on py3.13
-pip install -q ultralytics trimesh einops roma smplx
+pip install -q ultralytics trimesh einops roma smplx pyrender scipy
 
 # --- Body model files (licensed, gitignored): kept on Drive, copied to the repo root ---
 for f in basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl SMPLX_NEUTRAL.npz; do
@@ -32,5 +32,14 @@ ln -sfn $W/multihmr $MH/models/multiHMR
 ln -sf $W/multihmr/smpl_mean_params.npz $MH/models/smpl_mean_params.npz
 ln -sf $REPO/SMPLX_NEUTRAL.npz $MH/models/smplx/SMPLX_NEUTRAL.npz
 
+# --- Images: samples, COCO crowd (qualitative) and single-person (synthetic eval) ---
+mkdir -p "$WORK/coco"
+if [ ! -f "$WORK/coco/person_keypoints_val2017.json" ]; then
+  wget -q http://images.cocodataset.org/annotations/annotations_trainval2017.zip -O /tmp/coco_ann.zip
+  unzip -q -j -o /tmp/coco_ann.zip annotations/person_keypoints_val2017.json -d "$WORK/coco"; rm /tmp/coco_ann.zip
+fi
 python "$REPO/scripts/download_images.py"
+python "$REPO/scripts/download_images.py" coco_crowd crowd
+python "$REPO/scripts/download_images.py" coco_single single
+python -c "import torch; print('GPU:', torch.cuda.is_available())"
 echo "setup done"

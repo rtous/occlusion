@@ -12,6 +12,7 @@ from occlusion.modal import ModalSegmenter, overlay  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--images", default=str(IMAGES))
+ap.add_argument("--force", action="store_true", help="recompute even if cached")
 ap.add_argument("--no-sam", action="store_true")
 a = ap.parse_args()
 
@@ -19,6 +20,8 @@ out = OUTPUTS / "modal"
 out.mkdir(parents=True, exist_ok=True)
 seg = ModalSegmenter(use_sam=not a.no_sam)
 for f in sorted(Path(a.images).glob("*.jpg")):
+    if not a.force and (out / (f.stem + ".npz")).exists():
+        continue
     img = cv2.imread(str(f))
     persons = seg(img)
     cv2.imwrite(str(out / f.name), overlay(img, persons))

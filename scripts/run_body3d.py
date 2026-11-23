@@ -14,6 +14,7 @@ from occlusion.render import render_all, overlay_meshes  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--images", default=str(IMAGES))
+ap.add_argument("--force", action="store_true", help="recompute even if cached")
 ap.add_argument("--only", default=None, help="process a single file name")
 a = ap.parse_args()
 
@@ -24,6 +25,8 @@ files = sorted(Path(a.images).glob("*.jpg"))
 if a.only:
     files = [f for f in files if f.name == a.only]
 for f in files:
+    if not a.force and (out / (f.stem + ".npz")).exists():
+        continue
     img = cv2.imread(str(f))
     h, w = img.shape[:2]
     t = time.time()
