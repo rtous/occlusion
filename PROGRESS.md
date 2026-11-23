@@ -78,7 +78,7 @@ Open items (need the user):
 ## Paper (`paper/`)
 
 - **User decision: the old paper is unpublished; do NOT compare with it anywhere.** The movie frames are just another qualitative dataset.
-- Authors: Ruben Tous (contact, ruben.tous@upc.edu), Sebastià Nicolau, Beatriz Otero.
+- Authors: Ruben Tous (contact, ruben.tous@upc.edu), Beatriz Otero, Sebastià Nicolau.
 - `paper/main.tex` (plain `article` class for now), `paper/references.bib`, `paper/figures/` (all generated; `diagram.tex` source). Build: `bash paper/build.sh` (installs TeX Live on a fresh VM).
 - **After every change to the paper, rebuild the PDF and commit `paper/main.pdf` with the sources.**
 - Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red; none left). Don't rewrite the user's kept (black) text without asking.
