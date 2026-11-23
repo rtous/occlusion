@@ -39,7 +39,7 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | M5 inpainting + composite | done | LaMa; large holes leave dark smudges (mentioned in paper) |
 | M6 synthetic eval | done | 77 images (30 clean, 26 object, 21 human) |
 | Movie frames | done | 30 frames (`images/oldframes`), used as a second qualitative set in the paper (`figures/movies*.jpg`); NOT compared with the old paper |
-| Cartoon figure | done | `make_cartoon.py` + `blender_cartoon.py` (Blender 4.0 from apt, EEVEE runs headless via surfaceless EGL, ~1 min/character). The rig's armature space = SMPL-X canonical frame, T-pose; bone rotation = B^-1 R B. Uses Multi-HMR (re-run to get rotvecs). The .fbx files in models/ are unused (Mixamo rig) |
+| Cartoon figure | removed from paper (user: looks bad); scripts kept | `make_cartoon.py` + `blender_cartoon.py` (Blender 4.0 from apt, EEVEE runs headless via surfaceless EGL, ~1 min/character). The rig's armature space = SMPL-X canonical frame, T-pose; bone rotation = B^-1 R B. Uses Multi-HMR (re-run to get rotvecs). The .fbx files in models/ are unused (Mixamo rig) |
 | Figures | done | `scripts/make_figures.py` -> `paper/figures/` (hand-picked COCO crowd images; `--name movies` for the movie frames, see `run_all.sh`), `diagram.tex` (TikZ, built by `paper/build.sh`) |
 | Paper | draft complete | no `\todo` left; see Paper section |
 
@@ -64,11 +64,14 @@ Old v1 outputs kept on Drive as `outputs/{modal,body3d,occlusion,compose,eval}_v
 cd /content/occlusion && git pull && bash setup_colab.sh && bash run_all.sh   # all cached, fast
 bash paper/build.sh                                                           # rebuild paper/main.pdf
 ```
-**SAM 3D Body (done)**: `OCC_BODY=sam3d` -> `outputs/*_sam3d` (Multi-HMR outputs untouched; both reported, paper Table 3).
-Checkpoint cached in `weights/sam-3d-body-vith` (gated, user `rtous` has access). Top-down, prompted with our boxes + modal masks, shared 60deg camera.
-At open_frac 0.02: object occ IoU 0.489 (vs 0.385), human 0.498 (vs 0.452), clean FP 0.006 (vs 0.021), amodal 0.78/0.69/0.82; label acc object 0.889
-(pasted patches showing people get detected); misses 4 human targets (no cross-model recovery); ~13 s/img vs 1.2 s. Figures still use Multi-HMR.
-Possible next step: use SAM 3D Body as the main body model (ask user), or combine Multi-HMR detections as extra boxes for SAM 3D Body.
+**SAM 3D Body is now the MAIN method** (user decision 2026-11-23; default `OCC_BODY=sam3d`; Multi-HMR = comparison, `OCC_BODY=multihmr`).
+- `pipeline.detect_topdown`: person masks from the cross-model detection (YOLO + Multi-HMR, `detect()`), persons found by only one
+  detector need conf >= 0.5 (`single_conf`), SAM 3D Body per mask (box + mask prompt), bodies with <40% vertices inside the image dropped.
+- Archives: `*_sam3d_v1` (YOLO-only detection), `*_sam3d_v2` (cross-model, without single_conf). Multi-HMR outputs untouched (unsuffixed).
+- v2 numbers (in the paper until refreshed): object 0.489/0.034/0.777/0.889, human 0.532/0.022/0.767/0.972, clean FP 0.006, ~11 s/img.
+- IN PROGRESS: final run (v3, with single_conf) -> then refresh Tables 1-3, figures (`make_figures.py`, movies, `make_compare.py`), rebuild, commit.
+- Cartoon figure removed from the paper at user request (scripts kept: `make_cartoon.py`, `blender_cartoon.py`, Blender from apt).
+- Baseball team photo replaced by `000000008690` (girls behind goats) in all figures.
 
 Open items (need the user):
 1. Review the paper draft.

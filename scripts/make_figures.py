@@ -27,8 +27,8 @@ from occlusion.modal import overlay  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument("--images", default=str(IMAGES / "crowd"))
 ap.add_argument("--n-qual", type=int, default=6)
-ap.add_argument("--qual", default="000000247917,000000363666,000000281759,000000203389,000000306139,000000090891", help="comma-separated stems for the qualitative grid")
-ap.add_argument("--pick", default="000000247917,000000363666,000000281759", help="comma-separated stems for the single-image figures")
+ap.add_argument("--qual", default="000000008690,000000363666,000000281759,000000203389,000000306139,000000090891", help="comma-separated stems for the qualitative grid")
+ap.add_argument("--pick", default="000000008690,000000363666,000000281759", help="comma-separated stems for the single-image figures")
 ap.add_argument("--intro", action="store_true", help="also write occlusion_ex.jpg from the first --pick image")
 ap.add_argument("--name", default="", help="only write <name>.jpg (occlusion grid of --qual) and "
                 "<name>_deocclusion.jpg (composites of --pick), e.g. for the movie frames")

@@ -41,9 +41,10 @@ def list_images(folder):
                   if p.suffix.lower() in (".jpg", ".jpeg", ".png"))
 
 
-# Body model: "multihmr" (default) or "sam3d" (SAM 3D Body). Each body model writes to its
-# own output folders (modal_sam3d, body3d_sam3d, ...), so results of both can be reported.
-BODY = os.environ.get("OCC_BODY", "multihmr")
+# Body model: "sam3d" (SAM 3D Body, default, main method) or "multihmr" (comparison).
+# Multi-HMR writes to outputs/{modal,body3d,...}, SAM 3D Body to outputs/{modal,body3d,...}_sam3d,
+# so results of both can be reported.
+BODY = os.environ.get("OCC_BODY", "sam3d")
 
 
 def out_dir(name):

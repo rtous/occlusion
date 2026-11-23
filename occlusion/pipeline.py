@@ -49,21 +49,40 @@ def detect(seg, hmr, faces, img_bgr):
     return modal, mscores, [bodies[j] for j in kb], K, depths[kb]
 
 
-def detect_topdown(seg, hmr, faces, img_bgr):
-    """For a top-down body model (SAM 3D Body): one body per confident person mask,
-    prompted with that person's box and visible mask."""
+def detect_topdown(seg, hmr, faces, img_bgr, mhr_det=None, min_inside=0.4, single_conf=0.5):
+    """For a top-down body model (SAM 3D Body): one body per person mask, prompted with
+    that person's box and visible mask. The person masks come from the cross-model
+    detection (detect(), with Multi-HMR as a second person detector) when mhr_det =
+    (Multi-HMR estimator, its faces) is given, otherwise from the confident YOLO detections.
+    Bodies with less than min_inside of their vertices projected inside the image are
+    dropped (e.g. a head at the image border turned into a full body)."""
     h, w = img_bgr.shape[:2]
-    people = [p for p in seg(img_bgr) if p.score >= occ.STRONG_MODAL]
-    modal = np.array([p.mask for p in people], bool).reshape(-1, h, w)
-    mscores = np.array([p.score for p in people], np.float32)
-    if len(modal):
-        modal = resolve_overlaps(modal)
-        ok = modal.reshape(len(modal), -1).sum(1) > 0.0005 * h * w
+    if mhr_det is not None:
+        modal, mscores, _, _, mdepths = detect(seg, mhr_det[0], mhr_det[1], img_bgr)
+        # a person found by only one of the two detectors must be confident (e.g. blurry
+        # foreground hands or spectators at the border are often weak YOLO-only detections)
+        sils = np.isfinite(mdepths)
+        ok = [i for i in range(len(modal))
+              if mscores[i] >= single_conf or (len(sils) and occ.match(modal[i][None], sils))]
         modal, mscores = modal[ok], mscores[ok]
+    else:
+        people = [p for p in seg(img_bgr) if p.score >= occ.STRONG_MODAL]
+        modal = np.array([p.mask for p in people], bool).reshape(-1, h, w)
+        mscores = np.array([p.score for p in people], np.float32)
+        if len(modal):
+            modal = resolve_overlaps(modal)
+            ok = modal.reshape(len(modal), -1).sum(1) > 0.0005 * h * w
+            modal, mscores = modal[ok], mscores[ok]
     boxes = [(xs.min(), ys.min(), xs.max() + 1, ys.max() + 1) for ys, xs in (np.nonzero(m) for m in modal)]
     bodies, K = hmr(img_bgr, np.array(boxes, np.float32).reshape(-1, 4), modal)
-    depths, _ = render_all(bodies, faces, K, h, w)
-    return modal, mscores, bodies, K, depths
+    keep = []
+    for b in bodies:
+        uv = b.verts[:, :2] / np.maximum(b.verts[:, 2:], 1e-6) * [K[0, 0], K[1, 1]] + [K[0, 2], K[1, 2]]
+        inside = ((uv[:, 0] >= 0) & (uv[:, 0] < w) & (uv[:, 1] >= 0) & (uv[:, 1] < h)).mean()
+        if inside >= min_inside:
+            keep.append(b)
+    depths, _ = render_all(keep, faces, K, h, w)
+    return modal, mscores, keep, K, depths
 
 
 class Pipeline:
@@ -71,8 +90,11 @@ class Pipeline:
         from .config import BODY
         self.seg = ModalSegmenter(use_sam=use_sam)
         if BODY == "sam3d":
+            from functools import partial
             from .body3d_sam3d import Sam3DBodyEstimator
-            self.hmr, self._detect = Sam3DBodyEstimator(), detect_topdown
+            mh = BodyEstimator()                    # second person detector (cross-model detection)
+            self.hmr = Sam3DBodyEstimator()
+            self._detect = partial(detect_topdown, mhr_det=(mh, mh.faces))
         else:
             self.hmr, self._detect = BodyEstimator(), detect
         self.faces = self.hmr.faces
