@@ -1,0 +1,32 @@
+# COCO val2017, 3-8 people with occlusions (qualitative)
+# url  # license, flickr source
+http://images.cocodataset.org/val2017/000000566923.jpg  # Attribution License, http://farm1.staticflickr.com/205/515499299_0450056310_z.jpg
+http://images.cocodataset.org/val2017/000000199771.jpg  # Attribution License, http://farm6.staticflickr.com/5035/7115744429_7d4deeb996_z.jpg
+http://images.cocodataset.org/val2017/000000247917.jpg  # Attribution License, http://farm9.staticflickr.com/8164/7205570594_5aba222a6f_z.jpg
+http://images.cocodataset.org/val2017/000000351530.jpg  # Attribution-ShareAlike License, http://farm9.staticflickr.com/8334/8125752591_b7f7b8da3b_z.jpg
+http://images.cocodataset.org/val2017/000000306139.jpg  # Attribution-ShareAlike License, http://farm5.staticflickr.com/4092/5003303411_fd1d0e52ec_z.jpg
+http://images.cocodataset.org/val2017/000000498747.jpg  # Attribution-ShareAlike License, http://farm1.staticflickr.com/140/385877874_9ed6fcafbf_z.jpg
+http://images.cocodataset.org/val2017/000000422706.jpg  # Attribution License, http://farm5.staticflickr.com/4053/4612270698_66a0fc9286_z.jpg
+http://images.cocodataset.org/val2017/000000203389.jpg  # Attribution License, http://farm6.staticflickr.com/5257/5429775787_db93d0b30f_z.jpg
+http://images.cocodataset.org/val2017/000000023899.jpg  # Attribution-ShareAlike License, http://farm2.staticflickr.com/1419/4598390017_b554e5d29b_z.jpg
+http://images.cocodataset.org/val2017/000000548780.jpg  # Attribution-ShareAlike License, http://farm9.staticflickr.com/8451/8030321271_ebc4c4820c_z.jpg
+http://images.cocodataset.org/val2017/000000462371.jpg  # Attribution License, http://farm6.staticflickr.com/5322/8756476018_13876b971a_z.jpg
+http://images.cocodataset.org/val2017/000000363666.jpg  # Attribution License, http://farm3.staticflickr.com/2854/9178936197_56a8862bd5_z.jpg
+http://images.cocodataset.org/val2017/000000153229.jpg  # Attribution License, http://farm3.staticflickr.com/2498/4015454078_09a71cb072_z.jpg
+http://images.cocodataset.org/val2017/000000107226.jpg  # Attribution License, http://farm3.staticflickr.com/2139/2185708967_4da3c7fb32_z.jpg
+http://images.cocodataset.org/val2017/000000397354.jpg  # Attribution-ShareAlike License, http://farm1.staticflickr.com/188/410311643_a3c829f3c7_z.jpg
+http://images.cocodataset.org/val2017/000000150224.jpg  # Attribution License, http://farm1.staticflickr.com/202/478747964_7c8a47a4fe_z.jpg
+http://images.cocodataset.org/val2017/000000411938.jpg  # Attribution-ShareAlike License, http://farm6.staticflickr.com/5301/5694283812_1ba30885f9_z.jpg
+http://images.cocodataset.org/val2017/000000231879.jpg  # Attribution-ShareAlike License, http://farm8.staticflickr.com/7140/7469646364_19f9d8b394_z.jpg
+http://images.cocodataset.org/val2017/000000142971.jpg  # Attribution License, http://farm4.staticflickr.com/3316/5826779045_d3fb84f09b_z.jpg
+http://images.cocodataset.org/val2017/000000477288.jpg  # Attribution License, http://farm1.staticflickr.com/44/145871865_ebd837f546_z.jpg
+http://images.cocodataset.org/val2017/000000423123.jpg  # Attribution-ShareAlike License, http://farm6.staticflickr.com/5328/9358340286_480b6f05db_z.jpg
+http://images.cocodataset.org/val2017/000000411817.jpg  # Attribution-ShareAlike License, http://farm2.staticflickr.com/1159/1436355646_15eb51d0b1_z.jpg
+http://images.cocodataset.org/val2017/000000090891.jpg  # Attribution License, http://farm7.staticflickr.com/6145/5938772497_5a89d3ec7c_z.jpg
+http://images.cocodataset.org/val2017/000000008690.jpg  # Attribution-ShareAlike License, http://farm4.staticflickr.com/3753/9867545575_fa972e6c4a_z.jpg
+http://images.cocodataset.org/val2017/000000401862.jpg  # Attribution License, http://farm9.staticflickr.com/8540/8698627837_6d1fb59ce4_z.jpg
+http://images.cocodataset.org/val2017/000000388056.jpg  # Attribution License, http://farm4.staticflickr.com/3218/2443485512_533ba95111_z.jpg
+http://images.cocodataset.org/val2017/000000382125.jpg  # Attribution License, http://farm6.staticflickr.com/5239/7053693277_0d21e419e0_z.jpg
+http://images.cocodataset.org/val2017/000000281759.jpg  # Attribution License, http://farm8.staticflickr.com/7398/9546010205_60818f8424_z.jpg
+http://images.cocodataset.org/val2017/000000275198.jpg  # Attribution License, http://farm8.staticflickr.com/7262/7488569650_9e0faaf072_z.jpg
+http://images.cocodataset.org/val2017/000000250137.jpg  # Attribution License, http://farm5.staticflickr.com/4084/5028973928_910bfd2613_z.jpg
