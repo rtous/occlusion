@@ -51,6 +51,7 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 ## Paper (`paper/`)
 
 - `paper/main.tex` (plain `article` class for now), `paper/references.bib` (old bib + new entries). Build: `bash paper/build.sh`.
+- **After every change to the paper, rebuild the PDF (`bash paper/build.sh`) and commit `paper/main.pdf` with the sources.**
 - Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red). Don't rewrite kept text without asking the user: they wrote it by hand.
 - Figures go in `paper/figures/` (missing ones show as a placeholder box). Needed: occlusion_ex.jpg, diagram.pdf, modal_masks.jpg, meshes.jpg, background.jpg, deocclusion.jpg, qualitative.jpg, cartoon.jpg.
 - Table 1 (synthetic results) and several TODOs wait for the eval numbers.
@@ -74,4 +75,5 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 ## Conventions
 
 - All experiment code goes in the repo (`occlusion/` package + `scripts/`), runnable without redevelopment; commit after every working step.
+- Paper: always rebuild `paper/main.pdf` after editing and commit it.
 - Steps cache outputs on Drive and are resumable (`--force` to recompute).
