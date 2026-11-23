@@ -21,9 +21,9 @@ from occlusion import occlusion as occ  # noqa: E402
 from occlusion.compose import compose, person_layers  # noqa: E402
 
 V = "vlcsnap-2022-04-20-"
-DEF_OCC = [f"oldframes/{V}20h01m24s874.png", "crowd/000000363666.jpg", "crowd/000000008690.jpg",
+DEF_OCC = [f"oldframes/{V}20h01m24s874.png", "crowd/000000363666.jpg", "crowd/000000397354.jpg",
            f"oldframes/{V}19h56m40s250.png", "crowd/000000281759.jpg", f"oldframes/{V}20h01m01s279.png"]
-DEF_DEOCC = [f"oldframes/{V}20h01m24s874.png", "crowd/000000363666.jpg", "crowd/000000008690.jpg"]
+DEF_DEOCC = [f"oldframes/{V}20h01m24s874.png", "crowd/000000363666.jpg", "crowd/000000397354.jpg"]
 ap = argparse.ArgumentParser()
 ap.add_argument("--occ", nargs="+", default=DEF_OCC, help="images (relative to WORK/images)")
 ap.add_argument("--deocc", nargs="+", default=DEF_DEOCC)

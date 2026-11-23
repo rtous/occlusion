@@ -5,7 +5,7 @@ Refreshed human body occlusion mask estimation (occlusion = amodal − modal). M
 ## Pipeline
 
 1. **Modal masks**: YOLO11-seg person instances, refined with SAM 2 box prompts (`occlusion/modal.py`).
-2. **Amodal masks**: Multi-HMR SMPL-X meshes, projected with a small CPU rasteriser (`occlusion/body3d.py`, `occlusion/render.py`).
+2. **Amodal masks**: SAM 3D Body meshes (one per person, prompted with its box and mask; `occlusion/body3d_sam3d.py`), projected with a small CPU rasteriser (`occlusion/render.py`). Multi-HMR (`occlusion/body3d.py`) is used as a second person detector and as the comparison body model (`OCC_BODY=multihmr`).
    Both detectors run with a low threshold and cross-check each other; confident meshes without a visible mask get one from SAM 2 (`occlusion.select`, `pipeline.detect`).
 3. **Occlusion masks**: Hungarian matching of masks and meshes, `occ = amodal & ~modal`, each pixel labelled human or object occluded (`occlusion/occlusion.py`).
 4. **Background + composite**: LaMa inpainting, then meshes drawn with the occluded parts erased (`occlusion/inpaint.py`, `occlusion/compose.py`).
@@ -55,7 +55,7 @@ To find the parts of a person hidden behind something, we estimate the person's 
 - A person missed by both detectors (rare) gets no occlusion mask.
 
 ### Numbers (synthetic benchmark, 77 images)
-Occlusion IoU 0.39 (object occluders) / 0.45 (person occluders); occluder type correct for ~98% of pixels; only 2% of a non-occluded body is wrongly marked as occluded. Detecting with both models at a low threshold and cross-checking them fixed most missed, heavily occluded people. Details: `PROGRESS.md`, paper Tables 1-2.
+Main method (SAM 3D Body as body model): occlusion IoU 0.49 (object occluders) / 0.53 (person occluders); only 0.6% of a non-occluded body is wrongly marked as occluded; occluder type correct for ~91% (objects) / 97% (people) of pixels. With Multi-HMR as body model: 0.39 / 0.45 and 2.1%, but ~8x faster. Details: `PROGRESS.md`, paper Tables 1-3.
 
 ### Status
 Method done; paper draft complete (`paper/main.pdf`: method, results and ablation tables, COCO and movie-frame figures, related work up to 2026).

@@ -64,14 +64,15 @@ Old v1 outputs kept on Drive as `outputs/{modal,body3d,occlusion,compose,eval}_v
 cd /content/occlusion && git pull && bash setup_colab.sh && bash run_all.sh   # all cached, fast
 bash paper/build.sh                                                           # rebuild paper/main.pdf
 ```
-**SAM 3D Body is now the MAIN method** (user decision 2026-11-23; default `OCC_BODY=sam3d`; Multi-HMR = comparison, `OCC_BODY=multihmr`).
+**SAM 3D Body is the MAIN method** (user decision 2026-11-23; default `OCC_BODY=sam3d`; Multi-HMR = comparison, `OCC_BODY=multihmr`).
 - `pipeline.detect_topdown`: person masks from the cross-model detection (YOLO + Multi-HMR, `detect()`), persons found by only one
-  detector need conf >= 0.5 (`single_conf`), SAM 3D Body per mask (box + mask prompt), bodies with <40% vertices inside the image dropped.
-- Archives: `*_sam3d_v1` (YOLO-only detection), `*_sam3d_v2` (cross-model, without single_conf). Multi-HMR outputs untouched (unsuffixed).
-- v2 numbers (in the paper until refreshed): object 0.489/0.034/0.777/0.889, human 0.532/0.022/0.767/0.972, clean FP 0.006, ~11 s/img.
-- IN PROGRESS: final run (v3, with single_conf) -> then refresh Tables 1-3, figures (`make_figures.py`, movies, `make_compare.py`), rebuild, commit.
+  detector need conf >= 0.5 (`single_conf`; removes blurry foreground hands / border spectators), SAM 3D Body per mask (box + mask
+  prompt), bodies with <40% vertices inside the image dropped.
+- Final (v3) numbers, open_frac 0.02: object occ IoU 0.489 / FP 0.034 / amodal 0.777 / label 0.906; human 0.532 / 0.022 / 0.767 / 0.972;
+  clean FP 0.006, amodal 0.817. Misses 2 human targets (170191, 364102), like Multi-HMR. ~10 s/img (detection stage) on T4.
+- Archives on Drive: `*_sam3d_v1` (YOLO-only detection; ablation row), `*_sam3d_v2` (no single_conf). Multi-HMR outputs unsuffixed.
+- Figures: kitchen photo `000000397354` replaces the baseball team (user didn't like it nor the goats `008690`).
 - Cartoon figure removed from the paper at user request (scripts kept: `make_cartoon.py`, `blender_cartoon.py`, Blender from apt).
-- Baseball team photo replaced by `000000008690` (girls behind goats) in all figures.
 
 Open items (need the user):
 1. Review the paper draft.
