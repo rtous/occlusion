@@ -20,7 +20,7 @@ bash setup_colab.sh   # once per session; everything heavy is cached on Drive
 bash run_all.sh       # all steps, resumable
 ```
 
-Individual steps: `scripts/run_modal.py`, `run_body3d.py`, `run_occlusion.py`, `run_compose.py`, `make_synthetic_eval.py`, `eval.py` (`--open-frac`, `--dilate-frac` to re-score cached outputs).
+Individual steps: `scripts/run_detect.py`, `run_occlusion.py`, `run_compose.py`, `make_synthetic_eval.py`, `eval.py` (`--open-frac`, `--dilate-frac` to re-score cached outputs).
 
 Body models (licensed, not committed): `basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl` and `SMPLX_NEUTRAL.npz` in `/content/drive/MyDrive/occlusion_work/`.
 

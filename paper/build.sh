@@ -7,4 +7,5 @@ if ! command -v latexmk >/dev/null || ! kpsewhich lmodern.sty >/dev/null; then
   DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends \
     texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended lmodern latexmk >/dev/null
 fi
+(cd figures && pdflatex -interaction=nonstopmode -halt-on-error diagram.tex >/dev/null && rm -f diagram.aux diagram.log)
 latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex >/dev/null && echo "paper/main.pdf built"

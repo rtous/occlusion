@@ -1,6 +1,6 @@
 """Milestone 5: background inpainting (LaMa) + de-occlusion composite.
 
-Needs cached outputs of run_modal.py, run_body3d.py, run_occlusion.py.
+Needs cached outputs of run_detect.py.
 Writes WORK/outputs/compose/<img>.jpg:
   original | inpainted background | meshes without occlusion handling | de-occluded meshes
 and <img>_bg.png (the inpainted background).

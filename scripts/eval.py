@@ -6,7 +6,7 @@ best overlaps the GT visible region (gt_amodal & ~occluder). Metrics:
   amodal IoU   : IoU(projected mesh silhouette, GT amodal)
   label acc    : fraction of correctly-labelled pixels inside pred∩GT occlusion
                  (human for pasted people, object for pasted patches)
-A missed person (no match) counts as IoU 0.
+A missed person (no predicted visible mask covering >20% of the GT visible region) counts as IoU 0.
 Per-image results: WORK/outputs/eval/results.csv; summary printed and saved to summary.txt.
 """
 import argparse
@@ -53,7 +53,7 @@ for f in sorted((WORK / "synth").glob("*.jpg")):
             from occlusion.pipeline import Pipeline
             pipe = Pipeline()
         r = pipe(img)
-        np.savez_compressed(cf, modal=r.modal, K=r.K, verts=np.array([b.verts for b in r.bodies],
+        np.savez_compressed(cf, modal=r.modal, modal_scores=r.modal_scores, K=r.K, verts=np.array([b.verts for b in r.bodies],
                             np.float32).reshape(-1, 10475, 3), scores=np.array([b.score for b in r.bodies]))
     c = np.load(cf)
     if faces is None:
@@ -69,7 +69,7 @@ for f in sorted((WORK / "synth").glob("*.jpg")):
                amodal_iou=0.0, label_acc=np.nan, gt_ratio=gt["gt_occ"].sum() / gt["gt_amodal"].sum())
     if res.persons:
         p = max(res.persons, key=lambda p: (p.modal & vis).sum())
-        if (p.modal & vis).sum() > 0:
+        if (p.modal & vis).sum() > 0.2 * vis.sum():      # otherwise the target was missed
             row["occ_iou"] = iou(p.occ, gt["gt_occ"]) if gt["gt_occ"].any() else np.nan
             row["fp_ratio"] = (p.occ & ~gt["gt_occ"]).sum() / gt["gt_amodal"].sum()
             row["amodal_iou"] = iou(p.amodal, gt["gt_amodal"])

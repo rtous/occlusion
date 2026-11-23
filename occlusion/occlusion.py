@@ -44,6 +44,32 @@ def match(modal_masks, sils, min_iou=0.2):
     return [(i, j, iou[i, j]) for i, j in zip(r, c) if iou[i, j] >= min_iou]
 
 
+STRONG_MODAL = 0.35   # YOLO confidence of a "confident" person detection
+STRONG_BODY = 0.3     # Multi-HMR detection score of a "confident" body
+
+
+def select(modal_masks, modal_scores, sils, body_scores, min_iou=0.2,
+           t_modal=STRONG_MODAL, t_body=STRONG_BODY):
+    """Which detections to keep. Both detectors run with a low threshold; confident
+    detections are always kept, and a weak detection is kept only when it matches a
+    confident detection of the OTHER model that has no confident partner
+    (heavily occluded people are often missed by one of the two models).
+    Returns (modal indices, body indices, body indices still without a modal mask)."""
+    ms, bs = np.asarray(modal_scores), np.asarray(body_scores)
+    sm, wm = np.where(ms >= t_modal)[0], np.where(ms < t_modal)[0]
+    sb, wb = np.where(bs >= t_body)[0], np.where(bs < t_body)[0]
+    pairs = match(modal_masks[sm], sils[sb], min_iou)
+    um = np.setdiff1d(sm, [sm[i] for i, _, _ in pairs]).astype(int)
+    ub = np.setdiff1d(sb, [sb[j] for _, j, _ in pairs]).astype(int)
+    extra_b = [wb[j] for _, j, _ in match(modal_masks[um], sils[wb], min_iou)]
+    extra_m = [wm[i] for i, j, _ in match(modal_masks[wm], sils[ub], min_iou)]
+    got = {ub[j] for _, j, _ in match(modal_masks[wm], sils[ub], min_iou)}
+    keep_m = sorted(map(int, list(sm) + extra_m))
+    keep_b = sorted(map(int, list(sb) + extra_b))
+    no_mask = [int(j) for j in ub if j not in got]
+    return keep_m, keep_b, no_mask
+
+
 def compute(modal_masks, depths, min_iou=0.2, dilate_frac=0.03, open_frac=0.01):
     """modal_masks: (M,H,W) bool; depths: (N,H,W) float (inf = empty).
 

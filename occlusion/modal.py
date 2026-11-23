@@ -18,8 +18,9 @@ class Person:
 
 
 class ModalSegmenter:
+    """Returns ALL person detections with conf >= conf (default 0.1, deliberately low)."""
     def __init__(self, yolo_weights=YOLO_WEIGHTS, sam_weights=SAM_WEIGHTS,
-                 conf=0.35, use_sam=True):
+                 conf=0.1, use_sam=True):
         from ultralytics import YOLO, SAM
         # ultralytics downloads to the given path if it doesn't exist
         self.yolo = YOLO(str(WEIGHTS / yolo_weights))
@@ -48,12 +49,19 @@ class ModalSegmenter:
                 iou = inter / max((ym | sm).sum(), 1)
                 masks.append(sm if iou > 0.5 else ym)
             masks = np.stack(masks)
-        masks = _resolve_overlaps(masks, scores)
+        # NB: low-confidence detections are kept here; occlusion.select() decides which to use
+        # and resolve_overlaps() is applied afterwards.
         return [Person(b, float(s), m) for b, s, m in zip(boxes, scores, masks)
                 if m.sum() > 0.0005 * h * w]
 
 
-def _resolve_overlaps(masks, scores):
+    def segment_box(self, img_bgr, box):
+        """SAM 2 mask for one box prompt (used for meshes that have no visible mask)."""
+        s = self.sam.predict(img_bgr, bboxes=[list(map(float, box))], device=self.dev, verbose=False)[0]
+        return s.masks.data.cpu().numpy()[0] > 0.5
+
+
+def resolve_overlaps(masks):
     """Each pixel belongs to at most one person: the smaller mask wins
     (a small overlapping mask is usually the person in front)."""
     out = masks.copy()

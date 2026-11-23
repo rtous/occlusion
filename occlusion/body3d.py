@@ -55,7 +55,7 @@ class BodyEstimator:
                                     dtype=np.int64)
         self.size = self.model.img_size
 
-    def __call__(self, img_bgr, det_thresh=0.3):
+    def __call__(self, img_bgr, det_thresh=0.1):
         """Returns (bodies, K) with K the 3x3 intrinsics for the ORIGINAL image."""
         from utils import normalize_rgb, get_focalLength_from_fieldOfView
         h, w = img_bgr.shape[:2]

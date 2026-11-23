@@ -1,4 +1,4 @@
-"""Milestone 4: occlusion masks from cached modal (run_modal.py) and body (run_body3d.py) outputs.
+"""Milestone 4: occlusion masks from cached run_detect.py outputs.
 
 Writes WORK/outputs/occlusion/<img>.jpg  (original | modal | amodal | occlusion: red=object, blue=human)
 and <img>.npz with per-person masks.
@@ -25,7 +25,7 @@ a = ap.parse_args()
 for f in list_images(a.images):
     fm, fb = OUTPUTS / "modal" / (f.stem + ".npz"), OUTPUTS / "body3d" / (f.stem + ".npz")
     if not (fm.exists() and fb.exists()):
-        print("skip", f.name, "(run run_modal.py / run_body3d.py first)")
+        print("skip", f.name, "(run run_detect.py first)")
         continue
     img = cv2.imread(str(f))
     h, w = img.shape[:2]
