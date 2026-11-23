@@ -62,7 +62,7 @@ cd /content/occlusion && git pull && bash setup_colab.sh && bash run_all.sh   # 
 ```
 Open items (need the user):
 1. Contact author (`\todo` in title). Author order: Tous, Nicolau, Otero.
-2. Optionally more 2024-2026 related work; journal template.
+2. Journal template; set `\showchangesfalse` for submission. (Related work 2024-2026 done, citations verified online.)
 Possible method improvements (not required): mesh refinement to fit the modal silhouette (main error source = amodal IoU ~0.7).
 
 ## Paper (`paper/`)
