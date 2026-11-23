@@ -48,6 +48,13 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
   `python scripts/eval.py --open-frac 0.03 --tag _open03` (re-scoring is fast, network outputs are cached).
 - Synthetic eval numbers: see `outputs/eval/summary*.txt` (copy them here when available).
 
+## Paper (`paper/`)
+
+- `paper/main.tex` (plain `article` class for now), `paper/references.bib` (old bib + new entries). Build: `bash paper/build.sh`.
+- Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red). Don't rewrite kept text without asking the user: they wrote it by hand.
+- Figures go in `paper/figures/` (missing ones show as a placeholder box). Needed: occlusion_ex.jpg, diagram.pdf, modal_masks.jpg, meshes.jpg, background.jpg, deocclusion.jpg, qualitative.jpg, cartoon.jpg.
+- Table 1 (synthetic results) and several TODOs wait for the eval numbers.
+
 ## Next steps
 
 1. Get synthetic eval numbers; sweep `--open-frac` (0.01, 0.02, 0.03, 0.05) and `--dilate-frac`; set the best as default.

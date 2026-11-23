@@ -1,0 +1,306 @@
+% Human Body Occlusion Mask Estimation -- refreshed version.
+% Basic article class for now; move to the target journal's class later.
+%
+% Text conventions:
+%   - Text kept from old_paper.tex is left as it was.
+%   - \new{...}  marks text that is new or changed with respect to old_paper.tex (blue).
+%                Set \showchangesfalse below to print everything in black.
+%   - \todo{...} marks open items (red).
+%
+% Build:  cd paper && latexmk -pdf main.tex
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{textcomp}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[longnamesfirst,sort]{natbib}
+\bibpunct[, ]{(}{)}{;}{a}{,}{,}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
+
+\newif\ifshowchanges \showchangestrue
+\newcommand{\new}[1]{\ifshowchanges{\color{blue}#1}\else#1\fi}
+\newcommand{\todo}[1]{{\color{red}[TODO: #1]}}
+
+% Figure that compiles even if the image is not there yet.
+\newcommand{\safeincludegraphics}[2][]{%
+  \IfFileExists{#2}{\includegraphics[#1]{#2}}{\fbox{\parbox[c][3cm][c]{0.9\textwidth}{\centering\small missing figure: \texttt{\detokenize{#2}}}}}}
+
+\graphicspath{{figures/}}
+
+\title{Human Body Occlusion Mask Estimation}
+\author{Sebasti\`a Nicolau \and Ruben Tous \and Beatriz Otero\\[0.5ex]
+\small Universitat Polit\`ecnica de Catalunya (UPC), C/Jordi Girona, 1-3, C6, Campus Nord, 08034 Barcelona, Spain\\
+\small \todo{confirm author list and contact author}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This article presents a method to estimate a mask for the occluded parts of human bodies depicted in an image, i.e. the occlusion mask. The
+estimation of the occlusion mask plays an important role in many methods
+that address relevant problems of machine vision and image synthesis
+such as, e.g. human pose estimation or human de-occlusion. An accurate
+occlusion mask is also a requirement of synthesis methods that replace
+human figures by 3D meshes in photos or videos such as in 3D-based
+automatic image cartoonization. The method consists of three main steps:
+modal mask extraction, 3D human body reconstruction and background
+inpainting. \new{Modal mask extraction is done per person with an instance segmentation model (YOLO11) refined with Segment Anything 2, the 3D reconstruction of all the people in the image is obtained in a single pass with Multi-HMR, and the inpainting is done with LaMa. Each occluded pixel is further labelled as occluded by another person or by an object.} As far as we know, this is the
+first work focusing exclusively on this problem. \new{Besides a qualitative assessment, we introduce a simple synthetic benchmark, built by pasting objects and people over fully visible persons, which provides ground-truth occlusion masks.} The results obtained
+show that the method is capable of obtaining accurate estimations of the
+occlusion masks, and it can be successfully applied in automatic image
+cartoonization. \todo{add the main quantitative result}
+\end{abstract}
+
+\noindent\textbf{Keywords:} Computer Vision; Digital content creation; Deep Learning; Image cartoonization; Deocclusion; Human segmentation; Inpainting; Occlusion mask; 3D body reconstruction
+
+% ======================================================================
+\section{Introduction}
+\label{section:intro}
+Image segmentation, a crucial task in computer vision, is often hindered by the presence of occlusions. Occlusions occur when an object or part of an object is obscured by another object, making it difficult for algorithms to accurately segment the image. This problem is particularly challenging in the context of human body image processing, as the flexibility and movement of the human body can result in a wide range of poses and postures. In some cases, a very precise mask is not required, but alternative applications like synthesis methods that replace human figures by 3D meshes in photos or videos, as in 3D-based automatic image cartoonization (e.g. \citep{tous2023, completepose}), demand an accurate occlusion mask to properly overlay the characters over the background. A fundamental definition is the one of occlusion mask that represents the difference between the amodal body mask (the complete body, including occluded parts) and the modal body mask (the visible parts of the body).
+
+A straightforward approach to addressing occlusion in image segmentation is to invert the result of a segmentation method, which yields the union of the occlusion mask and the background. However, this method may not be suitable in certain scenarios, such as when the body shape in the image is larger than the original. A more sophisticated solution is to compute both the modal mask and the amodal mask using state-of-the-art methods and then subtracting them, as proposed in \citep{orcnn}. Potential applications of occlusion mask for 3D body reconstruction can be texture estimation, cartoonization, robotics, healthcare, biometric security systems, and impaired-people assistance.
+
+\begin{figure}[!h]
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/occlusion_ex.jpg}
+  \caption{From left to right: original image, modal mask, amodal mask and occlusion mask\new{ (red: occluded by an object, blue: occluded by another person)}}
+  \label{fig:occlusion mask}
+\end{figure}
+
+In this article, we explore various computer vision methods for addressing the challenge of occlusion in image segmentation, with a focus on human body image processing. Our goal is to obtain a mask for the occluded parts of a human body depicted in an image, i.e. the occlusion mask, which can be observed in Figure \ref{fig:occlusion mask}. This can be achieved by intersecting the body image segment and all other segments in the image. Figure~\ref{fig:workflow} shows the overall workflow of the method. \new{Our experiments are conducted on three sets of images: 30 frames selected from various movies, chosen in previous work to represent a diverse range of scenarios commonly found in films, including varying numbers of people per frame, different poses, and occlusion zones; 30 freely licensed photographs of groups of people from the COCO dataset \citep{cocodataset}; and a synthetic benchmark in which occluders are pasted over fully visible people, so that the true occlusion mask is known. The latter allows us, for the first time, to report quantitative results.}
+
+\begin{figure}
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/diagram.pdf}
+  \caption{Overview of the system's workflow. \todo{redraw the diagram with the new components}}
+  \label{fig:workflow}
+\end{figure}
+
+\new{With respect to a previous, unpublished version of this work, all the components of the pipeline have been replaced by current models that are simpler to deploy: the binary people segmentation is replaced by per-person instance masks, which make it possible to tell which person occludes which; the slow OpenPose plus SMPLify-X optimisation is replaced by a single forward pass of a multi-person mesh recovery network; and the diffusion-based inpainting is replaced by a fast, prompt-free inpainting network.}
+
+The remainder of this paper is organized as follows:
+Section~\ref{section:relatedwork} presents the related work on this topic. Section~\ref{section:modal} fundamentals of the methods employed to obtain the modal mask. Section~\ref{section:amodal} discusses the techniques attempted to obtain the amodal mask. \new{Section~\ref{section:occlusion} describes how the modal and amodal masks are combined into occlusion masks.} Section~\ref{section:background} explains the process for background recovery. \new{Section~\ref{section:deoclussion} introduces the application of our method in the cartoonization of images, and Section~\ref{section:experiments} presents the experimental results.}
+
+% ======================================================================
+\section{Related work}
+\label{section:relatedwork}
+Full 3D human body pose and shape estimation serves for emerging virtual reality applications, such as body shape animation, shape retargeting, motion mimic, computer vision, image synthesis, among others. Building precise de-occlusion masks is a challenging problem and our novel solution employs 3D meshing of the process figure. Even the novelty of this area, deep learning based techniques are achieving a mature state being fully able to reconstruct body pose and shape from single or multiple color images with partially- or non-visible parts. Among the works processing unicolor images, we find \citep{sigal2007combined}, \citep{OccShapePose}, \citep{bogo2016keep}, \citep{loper2015smpl}, \citep{yao2019densebody} and \citep{Pavlakos2016CoarsetoFineVP}. The original model in \citep{sigal2007combined} generates high quality 3D shapes by using the parametric model SCAPE in \citep{anguelov2005scape} and ground truth image silhouettes. The extraction of human information in \citep{OccShapePose} is performed by a end-to-end regression neural network trained with latent feature supervision. \citep{bogo2016keep} exploits a Convolutional Neural Networks (CNN) to customize the parametric model SMPL \citep{loper2015smpl} for precise 3D pose estimations, but less accurate shape reconstruction was presented. Later, Lassner improve the fitting process by using a segmentation CNN. Other single color-based methods are \citep{yao2019densebody} and \citep{Pavlakos2016CoarsetoFineVP}.
+
+Related works to this paper can be given as they serve for either pose, shape, or pose-shape estimation.  In the first class, we can list \citep{Li20143DHP, Mehta2016Monocular3H, Pavlakos2016CoarsetoFineVP} and \citep{Rogez2016MoCapguidedDA} based on an end-to-end paradigm and capable of joint location predictions, heatmap regressions, or image classification into pose classes. The training datasets of these models require images with 3D pose ground truth of limited availability. A recent model is the multi-layer perceptron developed by \citep{Martinez2017ASY} that uses 2D pose images to infer 3D joint locations. In the second class, we have the aforementioned SCAPE \citep{anguelov2005scape} and SMPL \citep{loper2015smpl} and the CNN in \citep{dibra2017human}. The inputs of these models are single images, mostly silhouettes, and their outputs are estimations of the parameters of an average body shape model. In the last class, we can cite \citep{Xu2017MonoPerfCapHP}, \citep{Alldieck2017OpticalF3}, \citep{Rhodin2016GeneralAH}. The more challenging human pose and shape joint prediction require more complex models, but delivers better biometric results. For monocular video, \citep{Xu2017MonoPerfCapHP} and \citep{Alldieck2017OpticalF3} develop alternative solutions. For images from multiple calibrated cameras, \citep{Rhodin2016GeneralAH} and \citep{Huang2017TowardsAM} present efficient reconstrution models. Using different sensor settings, \citep{Weiss2011Home3B} and \citep{Marcard2017SparseIP} present techniques for pose and shape joint recovery.
+
+\new{More recent approaches regress the parameters of the body model directly from the image with transformer architectures. HMR~2.0 \citep{goel2023humans} predicts SMPL parameters for each person crop with a vision transformer, and Multi-HMR \citep{baradel2024multihmr} detects all the people in the image and predicts their whole-body SMPL-X \citep{SMPL-X:2019} meshes and their placement in camera space in a single forward pass, on top of a DINOv2 \citep{oquab2024dinov2} backbone. These methods remove the need for the per-person optimisation of earlier fitting approaches and are the ones we build on.}
+
+Models can be also studied according to the type of images and the occlusion degree they suffer \citep{huang2009estimating}, \citep{sarandi2018robust}, \citep{girshick2011object}. In \citep{huang2009estimating}, monocular images with rectangle-shaped occlusions highly affect image quality. In \citep{sarandi2018robust}, more geometrically general synthetic occlusions are handled on single RGB images. In \citep{girshick2011object} real occlusions on real data are managed by using explicit occluding templates. In \citep{ghiasi2014parsing}, learning capabilities of the statistics of occlusion patterns, including figure-ground cues, are exploited for full body recovery. Specifically, for face reconstruction from challenging occluded images, methods are developed in \citep{rafi2015semantic}, \citep{tran2018extreme}, \citep{yu2018generative}, and \citep{wu2018occluded}.
+
+UV map representation of human body geometry surface is used by \citep{yao2019densebody}, \citep{OccShapePose} and \citep{feng2018joint}. To tackle this problem, probably presents the first solution based on an encoder-decoder network with input RGB images. In \citep{OccShapePose}, authors employ a custom U-Net model for body modal mask estimations. The resulting masks are not very precise but seem sufficient for presented applications, according to Author's arguments. \citep{feng2018joint} can reconstruct full facial by a technique that assigns different weight to each map point and compute a weighted loss. Methods based on amodal mask estimations are \citep{sym14030531}, \citep{AHPdataset} and \citep{orcnn}. \citep{sym14030531} performs image de-occlusion using occlusion masks obtained by subtracting the modal mask from the amodal mask. The modal mask is built by a pre-trained instance segmentation model and the amodal mask is built by a custom model with a hourglass network structure. In \citep{AHPdataset}, authors follow a very similar and novel approach that obtains the amodal mask by using a pre-trained   modal-mask building model. This method belongs to the amodal instance segmentation family whose accuracy is limited to a great extent on the state-of-the art methods. In \citep{orcnn}, authors describe ORCNN, an instance-aware model for semantic amodal segmentation. Trying to obtain the occlusion mask by this method has been part of our experimental work (described in detail in Section \ref{section:amodal}).  Although the result may be useful for de-occlusion or occlusion-aware human pose estimation tasks, it lacks the accuracy required for our purposes.
+
+Some final CNN-based works, we would like to mention are the Volumetric Regression model in \citep{jackson20183d} and the Neural Body Fitting approach proposed in \citep{omran2018neural}, both based on the pioneering work SMPL method. Alternative methods based on Generative Adversarial Networks (GAN) \citep{SeGAN}, \citep{AFD} and \citep{yang2023}. In \citep{SeGAN}, propose Se-GAN to generate the appearance and segmentation masks for invisible and visible regions of objects. A modal mask is obtained with a state-of-the-art segmentation method, where an amodal mask is estimated as an intermediate step. \citep{AFD} employ two separate GAN to reconstruct human faces with high consistency. The first GAN builds a whole region mask, while the second one removes the mask object leaving the damaged region with fine details ready for face de-occlusion. In \citep{yang2023}, occlusion masks are estimated as part of a method for correct self-occlusions in synthetic clothing images. The latest works (e.g. \citep{jain2023oneformer}) are  based on the use of transformers.
+
+Some comprehensive review papers are \citep{MUHAMMAD2022103628} and \citep{sarafianos20163d}, and we refer the reader to those for a more complete literature survey.
+
+\todo{related work: add recent amodal segmentation / human de-occlusion works (2023--2026)}
+
+% ======================================================================
+\section{Modal mask estimation}
+\label{section:modal}
+
+As mentioned earlier, modal mask estimation aims to segment the region of visible parts of objects, and here we deal with human bodies. Despite being the simplest task in our project, modal mask estimation can present a number of challenges, particularly when dealing with non-rigid and flexible human subjects. The presence of occlusions further complicates this task. However, it is worth noting that this problem has been extensively researched, and as a result, there are several established algorithms able to effectively solve it. \new{In previous work we compared different pre-trained models of the state-of-the-art algorithms in order to determine the most effective solution; we summarise that comparison below and then describe the approach adopted in this version.}
+
+\subsection{Instance human segmentation}
+
+\textit{Detectron2} \citep{wu2019detectron2} is a powerful library developed by Facebook AI Research for instance detection and segmentation. We use three different algorithms based on Mask R-CNN \citep{MaskRCNN} and integrate them into \textit{Detectron2}. All selected pre-trained models use a 101-layer residual network (ResNet, ResNeXt) as the backbone and a Feature Pyramid Network for object detection. These have been found to produce the best results for segmentation Average Precision (AP) on the COCO dataset \citep{cocodataset}. This dataset presents images for 80 object categories and about 250,000 human images. While the segmentation AP is a useful reference, its performance was not assessed for exclusively human images and occlusion treatment must further studied. Thus, we explore and compare different algorithms.
+
+For our experiments, we selected a Mask R-CNN baseline model using a ResNeXt-101-32x8d architecture. We find this algorithm able to detect most of the human instances, although it failed in a few cases. Additionally, shape edges are not well-defined and over-smoothed in most cases.
+
+Pointrend \citep{kirillov2019pointrend} is a module that performs point-based segmentation estimations based on a rendering process, and it can be used as a refinement of Mask R-CNN. Qualitatively, PointRend allows us to obtain well-defined edges compared to the previous method, although results may be imporved by an alternative method. Specifically, we use the pre-trained model rcnn-ResNeXt-101-32x8d-FPN-3x-coco.
+
+DensePose \citep{Guler2018DensePose} divides the human body into different parametrized parts and then maps them to the input image. We use the pre-trained model rcnn-ResNet-101-FPN-WC2-s1x, which uses a type 2 confidence estimation model for coordinate parametrization \citep{NEURIPS2019_53fde96f}. Of the three models, DensPose is the best at detecting all different human instances and determining their poses. However, the segmentation mask has a structural body shape and doesn't include appearance-based deformable elements such as hair and clothing. These are not detected being inconvenient for our purposes.
+
+Our conclusions suggest that these results could be further enhanced by using a fine-tuning approach on a human body modal dataset with a substantial number of occlusions, as opposed to utilizing a pre-trained model directly.
+
+\subsection{Binary human segmentation}
+
+Binary human segmentation is a specific case of semantic segmentation in which we classify all image pixels into two regions: human-contained regions and background. This task may be achieved by merging the different human instances found in the previous subsection. However, there are algorithms specifically designed to perform this task in human datasets, but not in more generic datasets, such as COCO.
+
+We first evaluate the People Segmentation algorithm \citep{people_segmentation}. It was trained on the Matting Human Dataset as well as on human body instances available on Mapillary Vistas Commercial 1.2 \citep{mapillary}, COCO, and Pascal VOC \citep{pascal} datasets. We select a pre-trained U-Net model with an EfficientNet-B3 encoder and found satisfactory results, displaying good performance in both detection and segmentation with edge well definition.
+
+Finally, we evaluate the Semantic Guided Human Matting (SGHM) algorithm, which is a technique used to separate the foreground object from the background while preserving fine details and object edges. The algorithm comprises an encoder-decoder network and a refinement process. Specifically, we employ the pre-trained SGHM-ResNet50 model \citep{wu2020skip} for our experiments. The output masks display high precision levels and fine details, approaching pixel-by-pixel accuracy. However, such precision may not be necessary for our intended purposes, and in some cases, these masks include objects not belonging to human figures.
+
+Although instance segmentation provides more information and may be necessary for certain situations, binary segmentation can prove to be a simpler solution to our problem and our results show being satisfactory.
+
+\subsection{\new{Adopted approach: detection plus promptable segmentation}}
+\new{The previous version of the method used binary segmentation. A binary mask, however, does not say which visible pixels belong to which person, and therefore cannot tell whether a body part is hidden by another person or by an object. In this version we compute one modal mask per person. People are first detected and roughly segmented with the YOLO11 instance segmentation model \citep{yolo11} (medium size, person class only). The bounding box of each detection is then used as a prompt for Segment Anything 2 (SAM~2) \citep{ravi2024sam2, kirillov2023sam}, which produces masks with sharper edges that include hair and clothing, the main weakness observed above for DensePose. When the SAM~2 mask disagrees strongly with the YOLO mask (intersection over union below 0.5), which happens when the prompt selects the background or an object instead of the person, the YOLO mask is kept. Finally, pixels claimed by two overlapping masks are assigned to the smaller one, which usually corresponds to the person in front. Both models are used off the shelf, without any fine-tuning.}
+
+\begin{figure}[!t]
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/modal_masks.jpg}
+  \caption{\new{Per-person modal masks obtained with YOLO11 and SAM~2.}}
+  \label{fig:modd}
+\end{figure}
+
+% ======================================================================
+\section{Amodal mask estimation}
+\label{section:amodal}
+
+Amodal mask estimation is considerably more difficult than modal mask building and can even be considered a generative task. In this study, we employ two amodal datasets to implement a simple solution method that we intensively assessed below.
+
+\subsection{Amodal image datasets}
+
+The Amodal Human Perception dataset was first introduced in \citep{AHPdataset} by compiling human images from several datasets obtaining a total of 56995 training examples. These large-scale datasets correspod to COCO, VOC (w/ SBD), Objects365 \citep{shao2019objects365}, LIP \footnote{https://github.com/topics/lip-dataset}, and OpenImages\footnote{https://github.com/openimages/dataset}. The ample image variability in these datasets allow a diverse sampling of genders, age, and poses, but with we a reduced number of occlusions. The synthetic dataset SAIL-VOS \citep{sailvos} includes 201 video sequences and 111,654 frames, extracted from the photorealistic video game GTA-V. SAIL-VOS images offer a large number of occlusions with various poses and perspectives, but present lower diversity in terms of age and gender.
+
+\subsection{Models}
+In reference to the article \citep{orcnn}, we investigate the Occlusion-aware R-CNN (ORCNN) algorithm, which is an end-to-end approach for amodal instance segmentation. Our objective is to train a Mask R-CNN model using the amodal AHP and SAIL-VOS datasets previously mentioned, and evaluate the obtained results. Experimentation starts with the AHP dataset with initial weights produced by the Mask R-CNN ResNet50-FPN model. The training process is conducted with a maximum learning rate of 0.005 over 10000 iterations using a batch size of 4 images.
+The obtained amodal masks are not entirely accurate, with some false positives appearing in the estimated amodal masks, lacking precision in the overall quality.
+
+We retrain the model following same approach, but using this time the SAIL-VOS dataset. Results have improved, particularly for standing poses. However, the overall quality of amodal masks is still relatively low, presenting some false positives.
+
+Based on these results, we confirm that our simple approach does not completely satisfies our goals. The approximation of occlusion masks is still not accurate enough. Thus, we proceed to implement a more robust method that takes into account all human body parts that should appear in the  occlusion mask, similar to DensePose technique. Considering the limited robustness of this method, results are similar to those found in \citep{orcnn}. Nonetheless, these are not sufficient to satisfy our objectives and will be disregarded in the subsequent sections of this study.
+
+\subsection{Amodal masks from 3D body reconstruction}
+\label{section:amodal3d}
+Although occlusion masks are useful in various applications, in this work the target application is to replace human figures with 3D meshes in photos or videos.
+A posed 3D model of each person appearing in the scene is computed with a 3D Human Pose Estimation algorithm and projected in 2D onto the image. The fact of having the reconstructed 3D shape of the body offers us an alternative way for calculating the occlusion mask in this type of applications. Since our results in calculating the amodal mask with ORCNN were not fully satisfactory, we instead use 2D projections of the 3D mesh as the amodal mask.
+
+\new{In the previous version of this work the 3D character reconstruction, explained in detail in \citep{tous2023}, started by extracting the 2D keypoints of each person with OpenPose \citep{Openpose} and then fitting a SMPL-X model \citep{SMPL-X:2019} to them with SMPLify-X, an optimisation that minimises the distance between the detected keypoints and the 2D projection of the posed model. This fitting is slow, runs independently for every person and requires installing and chaining two different tools.}
+
+\new{In this version we use Multi-HMR \citep{baradel2024multihmr}, which takes the whole image and, in a single forward pass, detects every person and regresses their SMPL-X pose, shape and expression parameters together with their 3D position in camera coordinates. We use the publicly available ViT-L model trained at a resolution of $672\times672$ pixels. The image is resized so that its longest side fits the network input and padded to a square; the camera is assumed to have a $60^\circ$ field of view. Because all the meshes are expressed in the same camera frame, their relative depth is directly available, which we exploit in Section~\ref{section:occlusion} to decide who is in front of whom.}
+
+\new{Each mesh $\mathcal{M}_j$ (10{,}475 vertices, 20{,}908 triangles) is projected with the camera intrinsics, mapped back to the resolution of the original image, and rasterised with a simple z-buffer (painter's algorithm), which yields for every person $j$ a silhouette $A_j$, used as the amodal mask, and a per-pixel depth map $D_j$ (with $D_j(p)=\infty$ outside the silhouette).}
+
+\begin{figure}[!h]
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/meshes.jpg}
+  \caption{\new{3D reconstruction with Multi-HMR: meshes projected over the input images.}}
+  \label{fig:mesh}
+\end{figure}
+
+% ======================================================================
+\section{\new{Occlusion mask estimation}}
+\label{section:occlusion}
+
+\new{By directly subtracting the modal mask from our 3D model, we obtain the occlusion mask. Before doing so, two practical issues have to be solved: the modal masks and the meshes come from independent models and must be paired, and both are imperfect at the boundaries.}
+
+\paragraph{\new{Matching.}}
+\new{Let $V_1,\dots,V_M$ be the modal masks and $A_1,\dots,A_N$ the projected silhouettes. We compute the intersection over union between every pair and solve the assignment problem with the Hungarian algorithm \citep{kuhn1955hungarian}, keeping the pairs with IoU of at least $0.2$. Unmatched meshes (people who are almost completely hidden, or false detections of the mesh recovery network) are not assigned a modal mask, but they still take part in the depth ordering below.}
+
+\paragraph{\new{Occlusion mask.}}
+\new{For a matched pair $(V_i, A_j)$, the modal mask is first clipped to a slightly dilated version of the amodal mask, which removes stray segmentation pixels far from the body, and the occlusion mask is then}
+\begin{equation}
+\new{O_j = A_j \land \lnot\, \big(V_i \land \operatorname{dilate}(A_j, r_d)\big),}
+\end{equation}
+\new{followed by a morphological opening with a radius $r_o$ that removes thin slivers caused by small misalignments between the mesh and the person. Both radii are proportional to the height of the person's silhouette ($r_d = 0.03\,h$, $r_o = 0.01\,h$). \todo{update $r_o$ after tuning on the synthetic benchmark}}
+
+\paragraph{\new{Human versus object occlusion.}}
+\new{When occlusion is caused by another human instance, the previous version of the method superimposed the occluding body's 3D model onto the occluded one. Here this is done automatically for every pixel: an occluded pixel $p \in O_j$ is labelled as \emph{occluded by a person} if another mesh is closer to the camera at that pixel, $\min_{k\neq j} D_k(p) < D_j(p)$, or if it belongs to the modal mask of another person; otherwise it is labelled as \emph{occluded by an object}.}
+
+% ======================================================================
+\section{Background extraction}
+\label{section:background}
+
+In order to reconstruct the original scene, it is necessary to extract the background. The first step is subtracting the modal mask, obtained using one of the methods described in Section \ref{section:modal}, from the original frame, resulting in an image with one or multiple holes. However, as modal mask estimations are imperfect, we introduce an optional pre-processing step of dilation. This step increases the mask area, therefore erasing minor mistakes at segmentation edges. Once this step is completed, state-of-the-art techniques for in-painting can be applied for background recovery. \new{In the previous version of this work we used a diffusion model \citep{von-platen-etal-2022-diffusers} based on Stable-Diffusion-v1-4 \citep{Rombach_2022_CVPR} for in-painting. In this version we use LaMa \citep{suvorov2022lama}, an inpainting network based on fast Fourier convolutions that handles large masks well, is deterministic, does not need a text prompt and is considerably faster. The union of all modal masks, dilated by 1.5\% of the image size, is used as the inpainting mask.} Figure \ref{fig:background} shows an example of the background extraction.
+
+\begin{figure}[!h]
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/background.jpg}
+  \caption{Background extraction \new{with LaMa}}
+  \label{fig:background}
+\end{figure}
+
+% ======================================================================
+\section{Deocclusion}
+\label{section:deoclussion}
+
+Although occlusion masks are useful in various applications, in this work the target application is to replace human figures with 3D meshes in photos or videos. The occlusion mask in necessary to erase the body parts originally hidden from the 2D projected mesh. \new{Each mesh is rendered over the inpainted background, and at every pixel we draw the closest mesh among the people that are \emph{not} occluded at that pixel. In this way, a body part that was hidden behind an object is erased and the object, which is part of the background, remains visible, while a body part hidden by another person is covered by that person's mesh.} The final results of this process can be observed in Figure \ref{fig:deocclusion}.
+
+\begin{figure*}
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/deocclusion.jpg}
+  \caption{De-occlusion steps. \new{From left to right: original frame, background extraction, meshes rendered without occlusion handling, and final result.}}
+  \label{fig:deocclusion}
+\end{figure*}
+
+One direct application of results obtained previously is automatic cartoonization of images and video sequences. Pictonatut \citep{tous2023} is an algorithm capable of obtaining cartoonized versions of human instances through 3D reconstruction. The challenge is occluding the parts of the cartoonized image that are not visible in the original frame, which is exactly what we have achieved here. \todo{cartoonization example with the new pipeline (Figure \ref{fig:cartoon})}
+
+\begin{figure*}
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/cartoon.jpg}
+  \caption{Application of our human deocclusion method to cartoonization}
+  \label{fig:cartoon}
+\end{figure*}
+
+% ======================================================================
+\section{\new{Experiments}}
+\label{section:experiments}
+
+\subsection{\new{Data}}
+\new{\textbf{Movie frames.} The 30 frames selected from various movies in the previous version of this work (see Appendix), which include varying numbers of people per frame, different poses, and occlusion zones. They allow a direct comparison with the previous pipeline.}
+
+\new{\textbf{COCO groups.} 30 images from the COCO 2017 validation set \citep{cocodataset} distributed under Creative Commons Attribution (or Attribution-ShareAlike) licenses, showing three to eight people and selected automatically using the keypoint annotations: we keep the images with the largest number of keypoints annotated as present but not visible, i.e.\ occluded.}
+
+\new{\textbf{Synthetic benchmark.} None of these images has ground-truth occlusion masks. To obtain a quantitative measure, we take 30 COCO validation images that contain a single person with all 17 keypoints visible and fully inside the image, and we assume that the visible mask of that person (obtained with the method of Section~\ref{section:modal}) is the ground-truth amodal mask. We then create three versions of each image: (i) \emph{clean}, the original image, whose ground-truth occlusion mask is empty; (ii) \emph{object}, in which an ellipse or rectangle textured with another image is pasted over part of the body; and (iii) \emph{human}, in which the cut-out of the person from another image of the set is scaled to a similar height and pasted beside the target so that it partially overlaps it. The ground-truth occlusion mask is the intersection of the amodal mask and the pasted region. Variants where the occluded fraction of the body is below 5\% or above 60\% are discarded, which leaves \todo{N} images.}
+
+\subsection{\new{Metrics}}
+\new{For each synthetic image we select the predicted person whose modal mask best overlaps the visible part of the target and report: the IoU between the predicted and the ground-truth occlusion masks (\emph{occlusion IoU}); the area wrongly marked as occluded divided by the area of the body (\emph{false-positive ratio}), which is the only meaningful measure on the clean images; the IoU between the projected mesh silhouette and the ground-truth amodal mask (\emph{amodal IoU}); and the fraction of correctly labelled pixels (person or object) inside the correctly predicted occlusion (\emph{label accuracy}). A person that is not detected counts as an IoU of zero.}
+
+\subsection{\new{Results}}
+
+\begin{table}[!h]
+  \centering
+  \caption{\new{Results on the synthetic benchmark.} \todo{fill in from outputs/eval/summary.txt}}
+  \label{tab:synthetic}
+  \begin{tabular}{lccccc}
+    \toprule
+    Variant & Images & Occlusion IoU & False-positive ratio & Amodal IoU & Label accuracy \\
+    \midrule
+    Object & -- & -- & -- & -- & -- \\
+    Human  & -- & -- & -- & -- & -- \\
+    Clean  & -- & n/a & -- & -- & n/a \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\new{\todo{discussion of quantitative results; effect of the opening radius $r_o$}}
+
+\new{\textbf{Qualitative results.} Figure~\ref{fig:qualitative} shows the results on the COCO group images. \todo{describe}. The main source of errors are inaccuracies of the recovered 3D pose: when a limb of the mesh does not exactly overlap the corresponding limb in the image, the part of the mesh that falls outside the person is wrongly considered occluded (by an object). This limitation was also present in the previous version, which relied on the fitted mesh as well. Other errors come from tight crops of people (e.g.\ upper-body shots), for which the recovered pose is less accurate, and from objects held by people (rackets, trophies), which may be included in the modal mask.}
+
+\begin{figure*}
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/qualitative.jpg}
+  \caption{\new{Qualitative results on COCO group images. For each image: original, modal masks, amodal masks and occlusion masks (red: occluded by an object, blue: occluded by another person).}}
+  \label{fig:qualitative}
+\end{figure*}
+
+\new{\textbf{Comparison with the previous version.} \todo{side-by-side on movie frames: previous pipeline (People Segmentation + SMPLify-X + Stable Diffusion) vs.\ the new one}}
+
+\new{\textbf{Computational cost.} \todo{per-image time on GPU; on a CPU-only machine, about 30\,s for the modal masks and 55\,s for the meshes}}
+
+% ======================================================================
+\section{Conclusion}
+
+In this work we have described a novel method to segment the occluded parts of the people that appear in a photograph, i.e., the occlusion masks. Although this type of masks is useful in various machine vision and image synthesis applications, in this case the target application would be to replace human figures with 3D meshes in photos or videos. As far as we know, this is the first work that focuses exclusively on this problem. Occlusion masks are obtained by substracting the modal mask of each human body from the corresponding amodal mask. \new{For modal mask extraction we use a per-person instance segmentation model refined with a promptable segmentation model (YOLO11 and SAM~2), which, compared with the binary segmentation used in the previous version, allows us to tell apart the occlusions produced by other people from those produced by objects.}
+
+For the extraction of the amodal mask we have discarded a specialized algorithm such as Occlusion-aware R-CNN (ORCNN) due to its lack of precision and we have chosen to use the 2D projection of the body 3D mesh, \new{obtained in a single forward pass for all the people in the image with Multi-HMR}. The qualitative assessment of the ultimate outcomes demonstrates the successful realization of our primary objective, i.e., obtaining precise estimations of occlusion masks. \new{\todo{summary of the quantitative results}} The obtained results demonstrate that the approach can be effectively applied in the automatic image cartoonization process and can be used in other related applications by interested practitioners.
+
+There are several ways to further improve our results. One promising avenue for future research is assessing the use of more advanced algorithms for amodal human body mask detection, such as the bi-layered graph network approach proposed by \citep{BiLayers}. Another approach would be using deocclusion techniques to improve pose detection for 3D reconstruction as \citep{sym14030531}. A particularly robust alternative would be to directly use occlusion-aware pose detection algorithms, such as the one proposed by \citep{OccShapePose}, which is specifically designed to handle occlusions. \new{A simpler improvement would be to refine the recovered meshes so that their silhouettes agree with the visible masks, which would reduce the errors caused by pose inaccuracies.} In this study, we have focused on the task of single image occlusion mask estimation. However, there is potential for further improvement by incorporating a temporal component using information from multiple frames. This could potentially increase the accuracy of our occlusion masks.
+
+\section*{Data and resources}
+\new{The code of this work is available at \url{https://github.com/rtous/occlusion}. The code and the movie frames of the previous version can be found at \url{https://github.com/snicolau/HumanBodyOcclusionMaskEstimation}.}
+
+\section*{Disclosure statement}
+The authors declare no conflict of interests.
+
+\bibliographystyle{apalike}
+\bibliography{references}
+
+\appendix
+\section{Movie frames}
+{\small The frames used for this project were gathered from the movies: \textit{The Curious Case of Benjamin Button}, \textit{Harry Potter and the Prisoner of Azkaban}, \textit{The Truman Show}, \textit{Mamma Mia! The Movie}, \textit{Mr. Bean's Holiday}, \textit{Harry Potter and the Half-Blood Prince}, \textit{Once Upon a Time in Hollywood}, \textit{Le fabuleux destin d'Am\'elie Poulain}, \textit{The Hunger Games: Catching Fire}, \textit{The Hunger Games: Mockingjay -- Part 1}, \textit{Herois}, \textit{Star Wars: Episode IV - A New Hope} and \textit{Intouchables}.} \todo{appendix figures with the results of the new pipeline on these frames (check copyright before publishing film stills)}
+
+\end{document}
