@@ -82,7 +82,7 @@ Open items (need the user):
 - `paper/main.tex` (plain `article` class for now), `paper/references.bib`, `paper/figures/` (all generated; `diagram.tex` source). Build: `bash paper/build.sh` (installs TeX Live on a fresh VM).
 - **After every change to the paper, rebuild the PDF and commit `paper/main.pdf` with the sources.**
 - Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red; none left). Don't rewrite the user's kept (black) text without asking.
-- Content: method with cross-model detection, Tables 1 (results) and 2 (ablation: detection, r_o sweep), COCO and movie-frame figures, de-occlusion and cartoon examples, timing, related work up to 2026 (all citations verified online: pix2gestalt, Zhan 2024, Xu 2024, SAMBA, Diffusion-VAS, DMAT, Noh & Chang, SAM 3D Body).
+- Content: method with cross-model detection, Tables 1 (results) and 2 (ablation: detection, r_o sweep), COCO and movie-frame figures, de-occlusion examples (cartoon figure removed at user request: plain meshes are not cartoons; old cartoon models not available), timing, related work up to 2026 (all citations verified online: pix2gestalt, Zhan 2024, Xu 2024, SAMBA, Diffusion-VAS, DMAT, Noh & Chang, SAM 3D Body).
 
 ## Environment gotchas
 

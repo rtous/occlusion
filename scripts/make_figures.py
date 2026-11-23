@@ -7,7 +7,6 @@ Writes paper/figures/*.jpg:
   meshes.jpg       Multi-HMR meshes over the same 3 images
   background.jpg   original | inpainted background
   deocclusion.jpg  original | background | meshes w/o occlusion handling | de-occluded
-  cartoon.jpg      original | de-occluded meshes over a stylised background
 Default images were hand-picked for readability; pass --qual '' / --pick '' to rank automatically.
 Only COCO (CC-licensed) images are used; the movie frames stay internal.
 """
@@ -107,11 +106,11 @@ if not a.name:
                                  for k in pick]))
     save("meshes.jpg", row([overlay_meshes(res[k]["img"], res[k]["ids"]) for k in pick]))
 
-# background / de-occlusion / cartoon need the inpainted background (cached by run_compose.py)
+# background / de-occlusion need the inpainted background (cached by run_compose.py)
 from occlusion.inpaint import Inpainter, background_mask  # noqa: E402
 from occlusion.compose import compose, person_layers  # noqa: E402
 inp = None
-rows_d, rows_b, rows_c = [], [], []
+rows_d, rows_b = [], []
 for k in (pick if a.name else pick[:2]):
     r = res[k]
     i = r["img"]
@@ -128,8 +127,6 @@ for k in (pick if a.name else pick[:2]):
     rows_b.append(row([i, bg]))
     rows_d.append(row([i, bg, compose(bg, layers, r["depths"], r["persons"], handle_occlusion=False),
                        compose(bg, layers, r["depths"], r["persons"])]))
-    toon = cv2.stylization(bg, sigma_s=60, sigma_r=0.45)
-    rows_c.append(row([i, compose(toon, layers, r["depths"], r["persons"])]))
 if a.intro:   # rows_d[0] is the de-occlusion row of pick[0]
     save("occlusion_ex.jpg", stack([occ_row(res[pick[0]]), rows_d[0]]))
 if a.name:
@@ -137,4 +134,3 @@ if a.name:
 else:
     save("background.jpg", rows_b[0])
     save("deocclusion.jpg", stack(rows_d))
-    save("cartoon.jpg", stack(rows_c, width=1600))
