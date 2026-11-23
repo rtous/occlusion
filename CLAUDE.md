@@ -6,4 +6,5 @@
 - We are executing withing a Google Colab virtual machine with GPU
 - I want you to do the experiments and keep iterating till you finish or need my feedback
 - Use google drive for temporal model checkpoints and other temporal files we don't want to lose if colab session is disconnected
-- Do commit and push when you consider convenient- When resuming, read PROGRESS.md (status, where files live, next steps) and update it before ending a session
+- Do commit and push when you consider convenient
+- When resuming, read PROGRESS.md (status, where files live, next steps) and update it before ending a session
