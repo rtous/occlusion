@@ -64,12 +64,11 @@ Old v1 outputs kept on Drive as `outputs/{modal,body3d,occlusion,compose,eval}_v
 cd /content/occlusion && git pull && bash setup_colab.sh && bash run_all.sh   # all cached, fast
 bash paper/build.sh                                                           # rebuild paper/main.pdf
 ```
-**In progress: SAM 3D Body as alternative body model** (user wants both reported; never delete Multi-HMR outputs).
-- Code done (`occlusion/body3d_sam3d.py`, `pipeline.detect_topdown`, `OCC_BODY=sam3d` -> `outputs/*_sam3d`). Multi-HMR re-check gave identical numbers.
-- Blocked on Hugging Face approval of facebook/sam-3d-body-vith for user `rtous` (requested 2026-11-23). In a new session: `! hf auth login` (device code), then `bash setup_colab.sh` caches the checkpoint in `weights/sam-3d-body-vith`.
-- Then: check mesh/image alignment (`OCC_BODY=sam3d python scripts/run_detect.py`, look at `outputs/body3d_sam3d/*.jpg`; verts = pred_vertices + pred_cam_t assumed OpenCV camera frame), run
-  `for D in $I $I/crowd $I/oldframes; do OCC_BODY=sam3d python scripts/run_detect.py --images $D; ... done; OCC_BODY=sam3d python scripts/eval.py`,
-  tune open_frac for it, add a Multi-HMR vs SAM 3D Body row/table to the paper.
+**SAM 3D Body (done)**: `OCC_BODY=sam3d` -> `outputs/*_sam3d` (Multi-HMR outputs untouched; both reported, paper Table 3).
+Checkpoint cached in `weights/sam-3d-body-vith` (gated, user `rtous` has access). Top-down, prompted with our boxes + modal masks, shared 60deg camera.
+At open_frac 0.02: object occ IoU 0.489 (vs 0.385), human 0.498 (vs 0.452), clean FP 0.006 (vs 0.021), amodal 0.78/0.69/0.82; label acc object 0.889
+(pasted patches showing people get detected); misses 4 human targets (no cross-model recovery); ~13 s/img vs 1.2 s. Figures still use Multi-HMR.
+Possible next step: use SAM 3D Body as the main body model (ask user), or combine Multi-HMR detections as extra boxes for SAM 3D Body.
 
 Open items (need the user):
 1. Review the paper draft.
