@@ -321,7 +321,21 @@ One direct application of results obtained previously is automatic cartoonizatio
   \end{tabular}
 \end{table}
 
-\new{\textbf{Body model.} Table~\ref{tab:bodymodel} compares Multi-HMR with SAM 3D Body. The meshes of SAM 3D Body fit the people better (amodal IoU of 0.78 versus 0.68 on the object variant and 0.82 versus 0.72 on the clean images), which translates into more accurate occlusion masks (occlusion IoU of 0.49 versus 0.39 for objects and 0.50 versus 0.45 for people) and into three times fewer false positives on non-occluded people. The improvement is smaller on the human variant because SAM 3D Body can only reconstruct the people found by the detector: heavily occluded targets that the segmentation model misses (4 of the 21 images, versus 2 with Multi-HMR and the cross-model detection) get no mask at all. The lower label accuracy on the object variant comes from a few pasted patches whose texture contains a picture of a person, which the detector finds and SAM 3D Body reconstructs, so that the occlusion is attributed to a person. On the other hand, SAM 3D Body is slower: about 13\,s per image on the T4 GPU (one forward pass per person, including the hand decoder), versus 1.2\,s for Multi-HMR. Unless stated otherwise, the figures use Multi-HMR.}
+\new{\textbf{Body model.} Table~\ref{tab:bodymodel} compares Multi-HMR with SAM 3D Body. The meshes of SAM 3D Body fit the people better (amodal IoU of 0.78 versus 0.68 on the object variant and 0.82 versus 0.72 on the clean images), which translates into more accurate occlusion masks (occlusion IoU of 0.49 versus 0.39 for objects and 0.50 versus 0.45 for people) and into three times fewer false positives on non-occluded people. The improvement is smaller on the human variant because SAM 3D Body can only reconstruct the people found by the detector: heavily occluded targets that the segmentation model misses (4 of the 21 images, versus 2 with Multi-HMR and the cross-model detection) get no mask at all. The lower label accuracy on the object variant comes from a few pasted patches whose texture contains a picture of a person, which the detector finds and SAM 3D Body reconstructs, so that the occlusion is attributed to a person. On the other hand, SAM 3D Body is slower: about 13\,s per image on the T4 GPU (one forward pass per person, including the hand decoder), versus 1.2\,s for Multi-HMR. Figures~\ref{fig:compare_occlusion} and~\ref{fig:compare_deocclusion} compare both body models on the same images. SAM 3D Body produces bulkier bodies that are closer to the clothed silhouettes, which reduces the false occlusion slivers along the limbs. Being top-down, however, it reconstructs a full body for every detection, including false or truncated ones: in the frame with the dancers, the head of a spectator at the lower border is turned into a full body whose lower part, outside the visible image, is marked as occluded. Unless stated otherwise, the other figures use Multi-HMR.}
+
+\begin{figure*}
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/compare_occlusion.jpg}
+  \caption{\new{Comparison of the body models. For each image: original, Multi-HMR meshes and occlusion masks, SAM 3D Body meshes and occlusion masks (red: occluded by an object, blue: occluded by another person).}}
+  \label{fig:compare_occlusion}
+\end{figure*}
+
+\begin{figure*}
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/compare_deocclusion.jpg}
+  \caption{\new{De-occlusion with the two body models: original, result with Multi-HMR, result with SAM 3D Body.}}
+  \label{fig:compare_deocclusion}
+\end{figure*}
 
 \new{\textbf{Movie frames.} Figures~\ref{fig:movies} and~\ref{fig:movies_deocclusion} show results on the movie frames. Typical occlusions in this kind of footage are produced by furniture and props (the bench and the flowers in the first two rows) and by people in the foreground (the audience in front of the dancers), and they are found and correctly labelled. The occlusion masks of people that are close to each other or partially outside the frame are also plausible. As in the COCO images, small fragments of the limbs remain where the mesh and the visible body disagree (e.g.\ the feet of the dancers in the last row of Figure~\ref{fig:movies_deocclusion}).}
 

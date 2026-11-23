@@ -19,3 +19,4 @@ python scripts/make_figures.py --images $I/oldframes --name movies --intro \
   --qual ${V}20h01m24s874,${V}19h34m02s125,${V}19h56m40s250,${V}20h01m01s279,${V}20h21m21s245,${V}20h01m56s515 \
   --pick ${V}20h01m24s874,${V}19h34m02s125,${V}19h56m40s250    # paper/figures/movies*.jpg
 python scripts/make_cartoon.py    # paper/figures/cartoon.jpg (Blender, models/*.blend; ~8 min, software EEVEE)
+python scripts/make_compare.py    # paper/figures/compare_*.jpg (needs the OCC_BODY=sam3d outputs too)
