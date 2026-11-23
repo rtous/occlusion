@@ -37,8 +37,8 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | M3 3D bodies | done | Multi-HMR 672_L (SMPL-X); projection verified (heads align); poses approximate on tight crops |
 | M4 occlusion masks | done, needs tuning | Hungarian IoU matching; human vs object label via mesh depth + other people's visible masks |
 | M5 inpainting + composite | done | LaMa TorchScript; composite draws nearest non-occluded mesh per pixel |
-| M6 synthetic eval | running / first numbers pending | `object`, `human`, `clean` variants; metrics: occ IoU, false-positive ratio, amodal IoU, label acc |
-| Old paper frames | running | same pipeline on the 30 movie frames from the old repo, to compare with the old figures |
+| M6 synthetic eval | partial (11/47 scored, CPU run interrupted for GPU switch) | `object`, `human`, `clean` variants; metrics: occ IoU, false-positive ratio, amodal IoU, label acc |
+| Old paper frames | partial (modal 17/30, body3d 0/30; interrupted) | same pipeline on the 30 movie frames from the old repo, to compare with the old figures |
 | Crowd figure grid | todo | `images/crowd` downloaded; need `scripts/make_figures.py` |
 
 ## Results so far
@@ -46,7 +46,26 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 - Sample images (`outputs/occlusion`, `outputs/compose`): street scene shows correct cuts (pole, trash bin); tennis crowd shows plausible human-human occlusions.
 - **Main failure mode**: mesh pose misfit (mostly legs/arms) shows up as false "object occlusion" slivers (e.g. `bus.jpg`, no real occlusions). Plan: tune `open_frac` (morphological opening, `occlusion/occlusion.py:compute`) on the synthetic benchmark using `clean` false-positive ratio vs `object`/`human` occ IoU:
   `python scripts/eval.py --open-frac 0.03 --tag _open03` (re-scoring is fast, network outputs are cached).
-- Synthetic eval numbers: see `outputs/eval/summary*.txt` (copy them here when available).
+- Synthetic eval numbers: see `outputs/eval/summary*.txt`. Partial (11 images, `summary_partial.txt`, open_frac 0.01):
+
+  | variant | n | occ IoU | false-pos ratio | amodal IoU | label acc |
+  |---|---|---|---|---|---|
+  | object | 4 | 0.35 | 0.058 | 0.49 | 1.00 |
+  | human | 2 | 0.51 | 0.048 | 0.69 | 0.97 |
+  | clean | 5 | n/a | 0.032 | 0.69 | n/a |
+
+  `000000000785_object`: target person not matched to any mesh (occ IoU 0) — investigate.
+
+## Resume here (after switching to the GPU runtime)
+
+```bash
+cd /content/occlusion && git pull && bash setup_colab.sh
+python -c "import torch; print(torch.cuda.is_available())"     # should be True now
+bash run_all.sh     # finishes old frames + synthetic eval (cached parts are skipped)
+python scripts/eval.py --cached-only                          # summary of everything scored
+for o in 0.0 0.02 0.03 0.05; do python scripts/eval.py --open-frac $o --tag _open$o; done   # tune sliver filter
+```
+Then: set best `open_frac` default in `occlusion/occlusion.py`, investigate `000000000785_object`, write `scripts/make_figures.py`, fill the paper table/figures, rebuild PDF.
 
 ## Paper (`paper/`)
 
