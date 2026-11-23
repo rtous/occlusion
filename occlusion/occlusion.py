@@ -70,7 +70,7 @@ def select(modal_masks, modal_scores, sils, body_scores, min_iou=0.2,
     return keep_m, keep_b, no_mask
 
 
-def compute(modal_masks, depths, min_iou=0.2, dilate_frac=0.03, open_frac=0.01):
+def compute(modal_masks, depths, min_iou=0.2, dilate_frac=0.03, open_frac=0.02):
     """modal_masks: (M,H,W) bool; depths: (N,H,W) float (inf = empty).
 
     dilate_frac / open_frac are relative to the person's amodal bbox height:

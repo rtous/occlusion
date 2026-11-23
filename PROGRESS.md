@@ -28,44 +28,43 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | `synth/` | synthetic benchmark (`make_synthetic_eval.py`) |
 | `outputs/{modal,body3d,occlusion,compose,eval}` | per-step outputs; `eval/cache/` holds raw network outputs per synthetic image |
 
-## Status (2026-11-23)
+## Status (2026-11-23, session 2: GPU T4)
 
 | Milestone | State | Notes |
 |---|---|---|
 | M1 environment | done | `setup_colab.sh` |
-| M2 modal masks | done | YOLO11m-seg + SAM 2.1-b box refinement; masks agree ~0.9 IoU |
-| M3 3D bodies | done | Multi-HMR 672_L (SMPL-X); projection verified (heads align); poses approximate on tight crops |
-| M4 occlusion masks | done, needs tuning | Hungarian IoU matching; human vs object label via mesh depth + other people's visible masks |
-| M5 inpainting + composite | done | LaMa TorchScript; composite draws nearest non-occluded mesh per pixel |
-| M6 synthetic eval | partial (11/47 scored, CPU run interrupted for GPU switch) | `object`, `human`, `clean` variants; metrics: occ IoU, false-positive ratio, amodal IoU, label acc |
-| Old paper frames | partial (modal 17/30, body3d 0/30; interrupted) | same pipeline on the 30 movie frames from the old repo, to compare with the old figures |
-| Crowd figure grid | todo | `images/crowd` downloaded; need `scripts/make_figures.py` |
+| M2+M3 detection | done | `scripts/run_detect.py` (replaces run_modal/run_body3d): YOLO11m-seg + SAM 2.1-b, Multi-HMR 672_L, **cross-model selection** (`occlusion.select`) + SAM fallback for meshes without mask (`pipeline.detect`) |
+| M4 occlusion masks | done | `open_frac` tuned: **0.02** (default now); `dilate_frac` has no effect |
+| M5 inpainting + composite | done | LaMa; large holes leave dark smudges (mentioned in paper) |
+| M6 synthetic eval | done | 77 images (30 clean, 26 object, 21 human) |
+| Old paper frames | done | outputs on Drive (`outputs/{occlusion,compose}/vlcsnap-*`), internal only |
+| Figures | done | `scripts/make_figures.py` -> `paper/figures/` (hand-picked COCO crowd images), `diagram.tex` (TikZ) |
 
-## Results so far
+## Results
 
-- Sample images (`outputs/occlusion`, `outputs/compose`): street scene shows correct cuts (pole, trash bin); tennis crowd shows plausible human-human occlusions.
-- **Main failure mode**: mesh pose misfit (mostly legs/arms) shows up as false "object occlusion" slivers (e.g. `bus.jpg`, no real occlusions). Plan: tune `open_frac` (morphological opening, `occlusion/occlusion.py:compute`) on the synthetic benchmark using `clean` false-positive ratio vs `object`/`human` occ IoU:
-  `python scripts/eval.py --open-frac 0.03 --tag _open03` (re-scoring is fast, network outputs are cached).
-- Synthetic eval numbers: see `outputs/eval/summary*.txt`. Partial (11 images, `summary_partial.txt`, open_frac 0.01):
+`outputs/eval/summary*.txt` (final = `summary.txt`), ablation `eval_v1/summary_v1*.txt` (old single-threshold detection; cache kept in `outputs/eval_v1/cache`).
 
-  | variant | n | occ IoU | false-pos ratio | amodal IoU | label acc |
-  |---|---|---|---|---|---|
-  | object | 4 | 0.35 | 0.058 | 0.49 | 1.00 |
-  | human | 2 | 0.51 | 0.048 | 0.69 | 0.97 |
-  | clean | 5 | n/a | 0.032 | 0.69 | n/a |
+| config | obj occ IoU | hum occ IoU | hum amodal IoU | clean FP |
+|---|---|---|---|---|
+| single threshold, open 0.01 | 0.382 | 0.400 | 0.572 | 0.042 |
+| cross-model, open 0.01 | 0.395 | 0.455 | 0.669 | 0.042 |
+| **cross-model, open 0.02 (final)** | 0.385 | 0.452 | 0.669 | 0.021 |
+| cross-model, open 0.03 / 0.05 | 0.335 / 0.221 | 0.373 / 0.147 | | 0.013 / 0.004 |
 
-  `000000000785_object`: target person not matched to any mesh (occ IoU 0) — investigate.
+Label accuracy ~0.98. Remaining miss: `000000170191_human` (neither model detects the occluded person).
+Timing on T4: detection 1.15 s/img, rasterise+occlusion 0.34 s, LaMa 0.85 s.
+Old v1 outputs kept on Drive as `outputs/{modal,body3d,occlusion,compose,eval}_v1`.
 
-## Resume here (after switching to the GPU runtime)
+## Resume here
 
 ```bash
-cd /content/occlusion && git pull && bash setup_colab.sh
-python -c "import torch; print(torch.cuda.is_available())"     # should be True now
-bash run_all.sh     # finishes old frames + synthetic eval (cached parts are skipped)
-python scripts/eval.py --cached-only                          # summary of everything scored
-for o in 0.0 0.02 0.03 0.05; do python scripts/eval.py --open-frac $o --tag _open$o; done   # tune sliver filter
+cd /content/occlusion && git pull && bash setup_colab.sh && bash run_all.sh   # all cached, fast
 ```
-Then: set best `open_frac` default in `occlusion/occlusion.py`, investigate `000000000785_object`, write `scripts/make_figures.py`, fill the paper table/figures, rebuild PDF.
+Open items (need the user):
+1. Author list (`\todo` in title).
+2. Comparison with the previous version on the movie frames: frames are copyrighted; the old paper showed them. Ask whether to include side-by-side figures (outputs exist on Drive) and whether old running times are known.
+3. Optionally more 2024-2026 related work; journal template.
+Possible method improvements (not required): mesh refinement to fit the modal silhouette (main error source = amodal IoU ~0.7).
 
 ## Paper (`paper/`)
 
@@ -73,9 +72,9 @@ Then: set best `open_frac` default in `occlusion/occlusion.py`, investigate `000
 - **After every change to the paper, rebuild the PDF (`bash paper/build.sh`) and commit `paper/main.pdf` with the sources.**
 - Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red). Don't rewrite kept text without asking the user: they wrote it by hand.
 - Figures go in `paper/figures/` (missing ones show as a placeholder box). Needed: occlusion_ex.jpg, diagram.pdf, modal_masks.jpg, meshes.jpg, background.jpg, deocclusion.jpg, qualitative.jpg, cartoon.jpg.
-- Table 1 (synthetic results) and several TODOs wait for the eval numbers.
+- Tables 1-2 (results, ablation) filled; remaining `\todo`s: authors, comparison with previous version, old running time, optional related work.
 
-## Next steps
+## Next steps (old list, items 1-2 done)
 
 1. Get synthetic eval numbers; sweep `--open-frac` (0.01, 0.02, 0.03, 0.05) and `--dilate-frac`; set the best as default.
 2. `scripts/make_figures.py`: paper-style grid (original | modal | amodal | occlusion | composite) on `images/crowd`.

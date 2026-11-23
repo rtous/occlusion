@@ -24,9 +24,10 @@ from occlusion.render import render_all  # noqa: E402
 from occlusion import occlusion as occ  # noqa: E402
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--open-frac", type=float, default=0.01)
+ap.add_argument("--open-frac", type=float, default=0.02)
 ap.add_argument("--dilate-frac", type=float, default=0.03)
 ap.add_argument("--tag", default="", help="suffix for summary file")
+ap.add_argument("--out", default="eval", help="output dir under WORK/outputs (eval_v1 = old detection, no selection)")
 ap.add_argument("--cached-only", action="store_true", help="only score images whose network outputs are cached")
 a = ap.parse_args()
 
@@ -35,7 +36,7 @@ def iou(a, b):
     return (a & b).sum() / max((a | b).sum(), 1)
 
 
-out = OUTPUTS / "eval"
+out = OUTPUTS / a.out
 cache = out / "cache"          # raw network outputs, so parameters can be re-scored quickly
 cache.mkdir(parents=True, exist_ok=True)
 pipe = None

@@ -8,7 +8,7 @@ Writes paper/figures/*.jpg:
   background.jpg   original | inpainted background
   deocclusion.jpg  original | background | meshes w/o occlusion handling | de-occluded
   cartoon.jpg      original | de-occluded meshes over a stylised background
-Images are picked automatically (most human/object occlusion) unless given with --qual / --pick.
+Default images were hand-picked for readability; pass --qual '' / --pick '' to rank automatically.
 Only COCO (CC-licensed) images are used; the movie frames stay internal.
 """
 import argparse
@@ -28,8 +28,8 @@ from occlusion.modal import overlay  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument("--images", default=str(IMAGES / "crowd"))
 ap.add_argument("--n-qual", type=int, default=6)
-ap.add_argument("--qual", default="", help="comma-separated stems for the qualitative grid")
-ap.add_argument("--pick", default="", help="comma-separated stems for the single-image figures")
+ap.add_argument("--qual", default="000000247917,000000363666,000000281759,000000203389,000000306139,000000090891", help="comma-separated stems for the qualitative grid")
+ap.add_argument("--pick", default="000000247917,000000363666,000000281759", help="comma-separated stems for the single-image figures")
 ap.add_argument("--out", default=str(REPO / "paper" / "figures"))
 a = ap.parse_args()
 FIG = Path(a.out)

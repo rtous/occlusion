@@ -51,10 +51,11 @@ To find the parts of a person hidden behind something, we estimate the person's 
 - **Tight crops** (half-body shots) give rougher poses, e.g. a wrong arm in `zidane.jpg`.
 - Small objects the segmenter includes in a person (trophies, rackets) leave little gaps.
 
+### Numbers (synthetic benchmark, 77 images)
+Occlusion IoU 0.39 (object occluders) / 0.45 (person occluders); occluder type correct for ~98% of pixels; only 2% of a non-occluded body is wrongly marked as occluded. Detecting with both models at a low threshold and cross-checking them fixed most missed, heavily occluded people. Details: `PROGRESS.md`, paper Tables 1-2.
+
 ### What's missing
-1. **Numbers.** The synthetic benchmark is built (47 images: 30 with no occlusion, 17 with a pasted object or person), and scoring is in progress. It measures how much the predicted occlusion overlaps the true one, how much is falsely marked on unoccluded people, and whether *person* vs. *object* is labelled correctly.
-2. **Reducing the false slivers**, using the benchmark to tune the filter that removes thin regions (`--open-frac`).
-3. **The figure grid** for the paper on 30 group photos (images already selected, figure script still to write).
-4. Then, the paper.
+1. Author list and a side-by-side with the old version on the movie frames (to decide).
+2. Optional: refining meshes to fit the visible masks (the main remaining error).
 
 Detailed, technical progress notes: `PROGRESS.md`.
