@@ -32,6 +32,18 @@ ln -sfn $W/multihmr $MH/models/multiHMR
 ln -sf $W/multihmr/smpl_mean_params.npz $MH/models/smpl_mean_params.npz
 ln -sf $REPO/SMPLX_NEUTRAL.npz $MH/models/smplx/SMPLX_NEUTRAL.npz
 
+# --- SAM 3D Body (optional alternative body model, OCC_BODY=sam3d): code + gated checkpoint ---
+# Checkpoint access: request it at https://huggingface.co/facebook/sam-3d-body-vith, then run
+# `hf auth login` once in the session; the checkpoint is then cached on Drive.
+S3=/content/third_party/sam-3d-body
+[ -d $S3 ] || git clone -q --depth 1 https://github.com/facebookresearch/sam-3d-body.git $S3
+pip install -q pytorch-lightning yacs timm roma omegaconf braceexpand huggingface_hub
+if [ ! -s $W/sam-3d-body-vith/model.ckpt ]; then
+  hf download facebook/sam-3d-body-vith --local-dir $W/sam-3d-body-vith >/dev/null 2>&1 \
+    && echo "SAM 3D Body checkpoint cached on Drive" \
+    || echo "NOTE: SAM 3D Body checkpoint not available (gated; see setup_colab.sh). Multi-HMR still works."
+fi
+
 # --- Images: samples, COCO crowd (qualitative) and single-person (synthetic eval) ---
 mkdir -p "$WORK/coco"
 if [ ! -f "$WORK/coco/person_keypoints_val2017.json" ]; then

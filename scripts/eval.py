@@ -18,7 +18,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from occlusion.config import WORK, OUTPUTS  # noqa: E402
+from occlusion.config import WORK, OUTPUTS, out_dir, load_faces  # noqa: E402
 from occlusion.body3d import Body  # noqa: E402
 from occlusion.render import render_all  # noqa: E402
 from occlusion import occlusion as occ  # noqa: E402
@@ -36,11 +36,10 @@ def iou(a, b):
     return (a & b).sum() / max((a | b).sum(), 1)
 
 
-out = OUTPUTS / a.out
+out = out_dir(a.out)
 cache = out / "cache"          # raw network outputs, so parameters can be re-scored quickly
 cache.mkdir(parents=True, exist_ok=True)
 pipe = None
-faces = None
 rows = []
 for f in sorted((WORK / "synth").glob("*.jpg")):
     gt = np.load(f.with_suffix(".npz"))
@@ -54,12 +53,12 @@ for f in sorted((WORK / "synth").glob("*.jpg")):
             from occlusion.pipeline import Pipeline
             pipe = Pipeline()
         r = pipe(img)
-        np.savez_compressed(cf, modal=r.modal, modal_scores=r.modal_scores, K=r.K, verts=np.array([b.verts for b in r.bodies],
-                            np.float32).reshape(-1, 10475, 3), scores=np.array([b.score for b in r.bodies]))
+        nv = int(pipe.faces.max()) + 1
+        np.savez_compressed(cf, modal=r.modal, modal_scores=r.modal_scores, K=r.K, faces=pipe.faces,
+                            verts=np.array([b.verts for b in r.bodies], np.float32).reshape(-1, nv, 3),
+                            scores=np.array([b.score for b in r.bodies]))
     c = np.load(cf)
-    if faces is None:
-        from occlusion.config import REPO
-        faces = np.load(REPO / "SMPLX_NEUTRAL.npz", allow_pickle=True)["f"].astype(np.int64)
+    faces = load_faces(c)
     depths, _ = render_all([Body(v, s) for v, s in zip(c["verts"], c["scores"])], faces, c["K"], h, w)
     res = type("R", (), {})()
     res.persons = occ.compute(c["modal"].reshape(-1, h, w), depths,

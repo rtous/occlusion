@@ -49,15 +49,37 @@ def detect(seg, hmr, faces, img_bgr):
     return modal, mscores, [bodies[j] for j in kb], K, depths[kb]
 
 
+def detect_topdown(seg, hmr, faces, img_bgr):
+    """For a top-down body model (SAM 3D Body): one body per confident person mask,
+    prompted with that person's box and visible mask."""
+    h, w = img_bgr.shape[:2]
+    people = [p for p in seg(img_bgr) if p.score >= occ.STRONG_MODAL]
+    modal = np.array([p.mask for p in people], bool).reshape(-1, h, w)
+    mscores = np.array([p.score for p in people], np.float32)
+    if len(modal):
+        modal = resolve_overlaps(modal)
+        ok = modal.reshape(len(modal), -1).sum(1) > 0.0005 * h * w
+        modal, mscores = modal[ok], mscores[ok]
+    boxes = [(xs.min(), ys.min(), xs.max() + 1, ys.max() + 1) for ys, xs in (np.nonzero(m) for m in modal)]
+    bodies, K = hmr(img_bgr, np.array(boxes, np.float32).reshape(-1, 4), modal)
+    depths, _ = render_all(bodies, faces, K, h, w)
+    return modal, mscores, bodies, K, depths
+
+
 class Pipeline:
     def __init__(self, use_sam=True):
+        from .config import BODY
         self.seg = ModalSegmenter(use_sam=use_sam)
-        self.hmr = BodyEstimator()
+        if BODY == "sam3d":
+            from .body3d_sam3d import Sam3DBodyEstimator
+            self.hmr, self._detect = Sam3DBodyEstimator(), detect_topdown
+        else:
+            self.hmr, self._detect = BodyEstimator(), detect
         self.faces = self.hmr.faces
         self._inpainter = None
 
     def __call__(self, img_bgr):
-        modal, mscores, bodies, K, depths = detect(self.seg, self.hmr, self.faces, img_bgr)
+        modal, mscores, bodies, K, depths = self._detect(self.seg, self.hmr, self.faces, img_bgr)
         return Result(modal, mscores, bodies, K, depths, occ.compute(modal, depths))
 
     def composite(self, img_bgr, res):

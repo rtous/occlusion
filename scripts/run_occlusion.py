@@ -11,19 +11,18 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from occlusion.config import IMAGES, OUTPUTS, REPO, list_images  # noqa: E402
+from occlusion.config import IMAGES, OUTPUTS, REPO, list_images, out_dir, load_faces  # noqa: E402
 from occlusion.render import render_all  # noqa: E402
 from occlusion import occlusion as occ  # noqa: E402
 from occlusion.body3d import Body  # noqa: E402
 
-faces = np.load(REPO / "SMPLX_NEUTRAL.npz", allow_pickle=True)["f"].astype(np.int64)
-out = OUTPUTS / "occlusion"
+out = out_dir("occlusion")
 out.mkdir(parents=True, exist_ok=True)
 ap = argparse.ArgumentParser()
 ap.add_argument("--images", default=str(IMAGES))
 a = ap.parse_args()
 for f in list_images(a.images):
-    fm, fb = OUTPUTS / "modal" / (f.stem + ".npz"), OUTPUTS / "body3d" / (f.stem + ".npz")
+    fm, fb = out_dir("modal") / (f.stem + ".npz"), out_dir("body3d") / (f.stem + ".npz")
     if not (fm.exists() and fb.exists()):
         print("skip", f.name, "(run run_detect.py first)")
         continue
@@ -31,6 +30,7 @@ for f in list_images(a.images):
     h, w = img.shape[:2]
     modal = np.load(fm)["masks"].reshape(-1, h, w)
     b = np.load(fb)
+    faces = load_faces(b)
     bodies = [Body(v, s) for v, s in zip(b["verts"], b["scores"])]
     depths, _ = render_all(bodies, faces, b["K"], h, w)
     persons = occ.compute(modal, depths)

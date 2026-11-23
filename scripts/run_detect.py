@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from occlusion.config import IMAGES, OUTPUTS, list_images  # noqa: E402
+from occlusion.config import IMAGES, OUTPUTS, list_images, out_dir  # noqa: E402
 from occlusion.modal import overlay  # noqa: E402
 from occlusion.render import overlay_meshes  # noqa: E402
 
@@ -23,7 +23,7 @@ ap.add_argument("--force", action="store_true", help="recompute even if cached")
 ap.add_argument("--only", default=None, help="process a single file name")
 a = ap.parse_args()
 
-om, ob = OUTPUTS / "modal", OUTPUTS / "body3d"
+om, ob = out_dir("modal"), out_dir("body3d")
 om.mkdir(parents=True, exist_ok=True)
 ob.mkdir(parents=True, exist_ok=True)
 files = [f for f in list_images(a.images) if not a.only or f.name == a.only]
@@ -43,8 +43,9 @@ for f in files:
     cv2.imwrite(str(ob / (f.stem + ".jpg")), np.hstack([img, overlay_meshes(img, ids)]))
     np.savez_compressed(om / (f.stem + ".npz"), masks=r.modal, scores=r.modal_scores,
                         boxes=np.array(boxes, np.float32).reshape(-1, 4))
-    np.savez_compressed(ob / (f.stem + ".npz"), K=r.K,
-                        verts=np.array([b.verts for b in r.bodies], np.float32).reshape(-1, 10475, 3),
+    nv = int(pipe.faces.max()) + 1
+    np.savez_compressed(ob / (f.stem + ".npz"), K=r.K, faces=pipe.faces,
+                        verts=np.array([b.verts for b in r.bodies], np.float32).reshape(-1, nv, 3),
                         scores=np.array([b.score for b in r.bodies]))
     print(f"{f.name}: {len(r.modal)} masks, {len(r.bodies)} bodies, {time.time() - t:.1f}s")
 print("outputs in", om, ob)

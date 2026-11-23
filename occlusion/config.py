@@ -39,3 +39,20 @@ def list_images(folder):
     from pathlib import Path
     return sorted(p for p in Path(folder).iterdir()
                   if p.suffix.lower() in (".jpg", ".jpeg", ".png"))
+
+
+# Body model: "multihmr" (default) or "sam3d" (SAM 3D Body). Each body model writes to its
+# own output folders (modal_sam3d, body3d_sam3d, ...), so results of both can be reported.
+BODY = os.environ.get("OCC_BODY", "multihmr")
+
+
+def out_dir(name):
+    return OUTPUTS / (name if BODY == "multihmr" else f"{name}_{BODY}")
+
+
+def load_faces(npz=None):
+    """Mesh faces stored in a body cache (SAM 3D Body / MHR); SMPL-X faces otherwise."""
+    import numpy as np
+    if npz is not None and "faces" in npz:
+        return npz["faces"].astype(np.int64)
+    return np.load(REPO / "SMPLX_NEUTRAL.npz", allow_pickle=True)["f"].astype(np.int64)

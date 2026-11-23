@@ -19,7 +19,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from occlusion.config import IMAGES, OUTPUTS, REPO, list_images  # noqa: E402
+from occlusion.config import IMAGES, OUTPUTS, REPO, list_images, out_dir, load_faces  # noqa: E402
 from occlusion.body3d import Body  # noqa: E402
 from occlusion.render import render_all, overlay_meshes  # noqa: E402
 from occlusion import occlusion as occ  # noqa: E402
@@ -36,21 +36,21 @@ ap.add_argument("--out", default=str(REPO / "paper" / "figures"))
 a = ap.parse_args()
 FIG = Path(a.out)
 FIG.mkdir(parents=True, exist_ok=True)
-faces = np.load(REPO / "SMPLX_NEUTRAL.npz", allow_pickle=True)["f"].astype(np.int64)
 
 
 def load(f):
-    fm, fb = OUTPUTS / "modal" / (f.stem + ".npz"), OUTPUTS / "body3d" / (f.stem + ".npz")
+    fm, fb = out_dir("modal") / (f.stem + ".npz"), out_dir("body3d") / (f.stem + ".npz")
     if not (fm.exists() and fb.exists()):
         return None
     img = cv2.imread(str(f))
     h, w = img.shape[:2]
     modal = np.load(fm)["masks"].reshape(-1, h, w)
     b = np.load(fb)
+    faces = load_faces(b)
     bodies = [Body(v, s) for v, s in zip(b["verts"], b["scores"])]
     depths, ids = render_all(bodies, faces, b["K"], h, w)
     persons = occ.compute(modal, depths)
-    return dict(f=f, img=img, modal=modal, bodies=bodies, K=b["K"], depths=depths, ids=ids, persons=persons)
+    return dict(f=f, img=img, faces=faces, modal=modal, bodies=bodies, K=b["K"], depths=depths, ids=ids, persons=persons)
 
 
 def row(panels, height=360, gap=6):
@@ -116,7 +116,7 @@ for k in (pick if a.name else pick[:2]):
     r = res[k]
     i = r["img"]
     h, w = i.shape[:2]
-    bf = OUTPUTS / "compose" / (k + "_bg.png")
+    bf = out_dir("compose") / (k + "_bg.png")
     if bf.exists():
         bg = cv2.imread(str(bf))
     else:
@@ -124,7 +124,7 @@ for k in (pick if a.name else pick[:2]):
         bg = inp(i, background_mask(r["modal"], i.shape))
         bf.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(bf), bg)
-    layers = person_layers(r["bodies"], faces, r["K"], h, w)
+    layers = person_layers(r["bodies"], r["faces"], r["K"], h, w)
     rows_b.append(row([i, bg]))
     rows_d.append(row([i, bg, compose(bg, layers, r["depths"], r["persons"], handle_occlusion=False),
                        compose(bg, layers, r["depths"], r["persons"])]))
