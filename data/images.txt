@@ -1,0 +1,8 @@
+# Sample images (COCO val2017, Flickr images under CC licenses; see COCO annotations for per-image license).
+# Not committed; fetched by scripts/download_images.py.
+https://ultralytics.com/images/bus.jpg
+https://ultralytics.com/images/zidane.jpg
+http://images.cocodataset.org/val2017/000000000785.jpg
+http://images.cocodataset.org/val2017/000000001000.jpg
+http://images.cocodataset.org/val2017/000000005529.jpg
+http://images.cocodataset.org/val2017/000000011197.jpg
