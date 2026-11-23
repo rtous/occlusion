@@ -15,6 +15,6 @@ python scripts/make_synthetic_eval.py || true   # M6 benchmark (exits if already
 python scripts/eval.py                          # M6 -> outputs/eval (network outputs cached per image)
 python scripts/make_figures.py                  # paper/figures from the crowd images
 V=vlcsnap-2022-04-20-
-python scripts/make_figures.py --images $I/oldframes --name movies \
+python scripts/make_figures.py --images $I/oldframes --name movies --intro \
   --qual ${V}20h01m24s874,${V}19h34m02s125,${V}19h56m40s250,${V}20h01m01s279,${V}20h21m21s245,${V}20h01m56s515 \
   --pick ${V}20h01m24s874,${V}19h34m02s125,${V}19h56m40s250    # paper/figures/movies*.jpg

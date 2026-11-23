@@ -2,7 +2,7 @@
 
 Writes paper/figures/*.jpg:
   qualitative.jpg  grid on COCO group images: original | modal | amodal | occlusion
-  occlusion_ex.jpg one row of the above (intro figure)
+  occlusion_ex.jpg intro figure (--intro): occlusion row + de-occlusion row of the first --pick image
   modal_masks.jpg  per-person modal masks over 3 images
   meshes.jpg       Multi-HMR meshes over the same 3 images
   background.jpg   original | inpainted background
@@ -30,6 +30,7 @@ ap.add_argument("--images", default=str(IMAGES / "crowd"))
 ap.add_argument("--n-qual", type=int, default=6)
 ap.add_argument("--qual", default="000000247917,000000363666,000000281759,000000203389,000000306139,000000090891", help="comma-separated stems for the qualitative grid")
 ap.add_argument("--pick", default="000000247917,000000363666,000000281759", help="comma-separated stems for the single-image figures")
+ap.add_argument("--intro", action="store_true", help="also write occlusion_ex.jpg from the first --pick image")
 ap.add_argument("--name", default="", help="only write <name>.jpg (occlusion grid of --qual) and "
                 "<name>_deocclusion.jpg (composites of --pick), e.g. for the movie frames")
 ap.add_argument("--out", default=str(REPO / "paper" / "figures"))
@@ -102,7 +103,6 @@ print("qualitative:", qual, "\npick:", pick)
 
 save((a.name or "qualitative") + ".jpg", stack([occ_row(res[k]) for k in qual]))
 if not a.name:
-    save("occlusion_ex.jpg", occ_row(res[pick[0]]))
     save("modal_masks.jpg", row([overlay(res[k]["img"], [type("P", (), {"mask": m}) for m in res[k]["modal"]])
                                  for k in pick]))
     save("meshes.jpg", row([overlay_meshes(res[k]["img"], res[k]["ids"]) for k in pick]))
@@ -130,6 +130,8 @@ for k in (pick if a.name else pick[:2]):
                        compose(bg, layers, r["depths"], r["persons"])]))
     toon = cv2.stylization(bg, sigma_s=60, sigma_r=0.45)
     rows_c.append(row([i, compose(toon, layers, r["depths"], r["persons"])]))
+if a.intro:   # rows_d[0] is the de-occlusion row of pick[0]
+    save("occlusion_ex.jpg", stack([occ_row(res[pick[0]]), rows_d[0]]))
 if a.name:
     save(a.name + "_deocclusion.jpg", stack(rows_d))
 else:
