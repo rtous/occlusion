@@ -44,6 +44,9 @@ if [ ! -s $W/sam-3d-body-vith/model.ckpt ]; then
     || echo "NOTE: SAM 3D Body checkpoint not available (gated; see setup_colab.sh). Multi-HMR still works."
 fi
 
+# --- Blender (Ubuntu package) for the cartoonization figure (scripts/make_cartoon.py) ---
+command -v blender >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends blender >/dev/null
+
 # --- Images: samples, COCO crowd (qualitative) and single-person (synthetic eval) ---
 mkdir -p "$WORK/coco"
 if [ ! -f "$WORK/coco/person_keypoints_val2017.json" ]; then

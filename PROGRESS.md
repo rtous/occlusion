@@ -39,6 +39,7 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | M5 inpainting + composite | done | LaMa; large holes leave dark smudges (mentioned in paper) |
 | M6 synthetic eval | done | 77 images (30 clean, 26 object, 21 human) |
 | Movie frames | done | 30 frames (`images/oldframes`), used as a second qualitative set in the paper (`figures/movies*.jpg`); NOT compared with the old paper |
+| Cartoon figure | done | `make_cartoon.py` + `blender_cartoon.py` (Blender 4.0 from apt, EEVEE runs headless via surfaceless EGL, ~1 min/character). The rig's armature space = SMPL-X canonical frame, T-pose; bone rotation = B^-1 R B. Uses Multi-HMR (re-run to get rotvecs). The .fbx files in models/ are unused (Mixamo rig) |
 | Figures | done | `scripts/make_figures.py` -> `paper/figures/` (hand-picked COCO crowd images; `--name movies` for the movie frames, see `run_all.sh`), `diagram.tex` (TikZ, built by `paper/build.sh`) |
 | Paper | draft complete | no `\todo` left; see Paper section |
 
@@ -82,7 +83,7 @@ Open items (need the user):
 - `paper/main.tex` (plain `article` class for now), `paper/references.bib`, `paper/figures/` (all generated; `diagram.tex` source). Build: `bash paper/build.sh` (installs TeX Live on a fresh VM).
 - **After every change to the paper, rebuild the PDF and commit `paper/main.pdf` with the sources.**
 - Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red; none left). Don't rewrite the user's kept (black) text without asking.
-- Content: method with cross-model detection, Tables 1 (results) and 2 (ablation: detection, r_o sweep), COCO and movie-frame figures, de-occlusion examples (cartoon figure removed at user request: plain meshes are not cartoons; old cartoon models not available), timing, related work up to 2026 (all citations verified online: pix2gestalt, Zhan 2024, Xu 2024, SAMBA, Diffusion-VAS, DMAT, Noh & Chang, SAM 3D Body).
+- Content: method with cross-model detection, Tables 1 (results) and 2 (ablation: detection, r_o sweep), COCO and movie-frame figures, de-occlusion examples, cartoonization figure (`scripts/make_cartoon.py`: user's toon characters `models/*.blend`, SMPL-X rig, posed with Multi-HMR rotvecs, rendered in Blender, occluded parts erased), timing, related work up to 2026 (all citations verified online: pix2gestalt, Zhan 2024, Xu 2024, SAMBA, Diffusion-VAS, DMAT, Noh & Chang, SAM 3D Body).
 
 ## Environment gotchas
 

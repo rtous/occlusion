@@ -228,7 +228,14 @@ Although occlusion masks are useful in various applications, in this work the ta
   \label{fig:deocclusion}
 \end{figure*}
 
-One direct application of results obtained previously is automatic cartoonization of images and video sequences. Pictonatut \citep{tous2023} is an algorithm capable of obtaining cartoonized versions of human instances through 3D reconstruction. The challenge is occluding the parts of the cartoonized image that are not visible in the original frame, which is exactly what we have achieved here.
+One direct application of results obtained previously is automatic cartoonization of images and video sequences. Pictonatut \citep{tous2023} is an algorithm capable of obtaining cartoonized versions of human instances through 3D reconstruction. The challenge is occluding the parts of the cartoonized image that are not visible in the original frame, which is exactly what we have achieved here. \new{Figure~\ref{fig:cartoon} shows two examples. The characters are 3D cartoon models rigged with the SMPL-X skeleton and rendered with a toon shader in Blender. Each one is posed with the SMPL-X joint rotations recovered by Multi-HMR, placed at the recovered 3D position of the person, and rendered with the same camera. They are then composited over the inpainted background with the procedure of Section~\ref{section:deoclussion}: where two characters overlap, the nearest one is drawn, and the parts hidden by objects are erased with the occlusion mask, slightly dilated because the silhouette of the character does not coincide with that of the SMPL-X body. As a result, the characters appear behind the bench and the table, as the real people do.}
+
+\begin{figure*}
+  \centering
+  \safeincludegraphics[width=\textwidth]{figures/cartoon.jpg}
+  \caption{Application of our human deocclusion method to cartoonization\new{: original image (left) and cartoon characters posed with the recovered 3D bodies, with the occluded parts erased (right)}.}
+  \label{fig:cartoon}
+\end{figure*}
 
 % ======================================================================
 \section{\new{Experiments}}

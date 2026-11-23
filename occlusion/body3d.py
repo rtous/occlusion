@@ -22,6 +22,7 @@ MODEL_NAME = "multiHMR_672_L"
 class Body:
     verts: np.ndarray    # (V,3) camera coords (OpenCV: x right, y down, z forward), metres
     score: float
+    params: dict = None  # Multi-HMR only: rotvec (53,3) SMPL-X joint rotations, pelvis (3,) camera coords
 
 
 @contextmanager
@@ -74,7 +75,9 @@ class BodyEstimator:
             humans = self.model(x, is_training=False, nms_kernel_size=3,
                                 det_thresh=det_thresh, K=K)
         name = "verts_smplx" if humans and "verts_smplx" in humans[0] else "v3d"
-        bodies = [Body(hm[name].float().cpu().numpy(), float(hm["scores"]))
+        bodies = [Body(hm[name].float().cpu().numpy(), float(hm["scores"]),
+                       dict(rotvec=hm["rotvec"].float().cpu().numpy().reshape(-1, 3),
+                            pelvis=hm["transl_pelvis"].float().cpu().numpy().reshape(3)))
                   for hm in humans]
         # intrinsics in original-image pixels: u_orig = (u_sq - ox) / s
         Ko = np.array([[f / s, 0, (S / 2 - ox) / s],
