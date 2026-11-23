@@ -1,0 +1,9 @@
+- We are in the root of the repository https://github.com/rtous/occlusion
+- The goal is to generate a new, fresher version, of the method described in old_paper.tex, which was never published
+- We want to replace the tools (e.g. segmentation model) that are now deprecated
+- We don't want to complicate our lives, we do not want super good results, just something that works
+- Later we will work on the paper but now let's concentrate in the method
+- We are executing withing a Google Colab virtual machine with GPU
+- I want you to do the experiments and keep iterating till you finish or need my feedback
+- Use google drive for temporal model checkpoints and other temporal files we don't want to lose if colab session is disconnected
+- Do commit and push when you consider convenient
