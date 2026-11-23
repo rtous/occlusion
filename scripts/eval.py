@@ -9,6 +9,7 @@ best overlaps the GT visible region (gt_amodal & ~occluder). Metrics:
 A missed person (no match) counts as IoU 0.
 Per-image results: WORK/outputs/eval/results.csv; summary printed and saved to summary.txt.
 """
+import argparse
 import csv
 import sys
 from pathlib import Path
@@ -18,8 +19,15 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from occlusion.config import WORK, OUTPUTS  # noqa: E402
-from occlusion.pipeline import Pipeline  # noqa: E402
+from occlusion.body3d import Body  # noqa: E402
+from occlusion.render import render_all  # noqa: E402
 from occlusion import occlusion as occ  # noqa: E402
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--open-frac", type=float, default=0.01)
+ap.add_argument("--dilate-frac", type=float, default=0.03)
+ap.add_argument("--tag", default="", help="suffix for summary file")
+a = ap.parse_args()
 
 
 def iou(a, b):
@@ -27,21 +35,40 @@ def iou(a, b):
 
 
 out = OUTPUTS / "eval"
-out.mkdir(parents=True, exist_ok=True)
-pipe = Pipeline()
+cache = out / "cache"          # raw network outputs, so parameters can be re-scored quickly
+cache.mkdir(parents=True, exist_ok=True)
+pipe = None
+faces = None
 rows = []
 for f in sorted((WORK / "synth").glob("*.jpg")):
     gt = np.load(f.with_suffix(".npz"))
     img = cv2.imread(str(f))
-    res = pipe(img)
+    h, w = img.shape[:2]
+    cf = cache / (f.stem + ".npz")
+    if not cf.exists():
+        if pipe is None:
+            from occlusion.pipeline import Pipeline
+            pipe = Pipeline()
+        r = pipe(img)
+        np.savez_compressed(cf, modal=r.modal, K=r.K, verts=np.array([b.verts for b in r.bodies],
+                            np.float32).reshape(-1, 10475, 3), scores=np.array([b.score for b in r.bodies]))
+    c = np.load(cf)
+    if faces is None:
+        from occlusion.config import REPO
+        faces = np.load(REPO / "SMPLX_NEUTRAL.npz", allow_pickle=True)["f"].astype(np.int64)
+    depths, _ = render_all([Body(v, s) for v, s in zip(c["verts"], c["scores"])], faces, c["K"], h, w)
+    res = type("R", (), {})()
+    res.persons = occ.compute(c["modal"].reshape(-1, h, w), depths,
+                             dilate_frac=a.dilate_frac, open_frac=a.open_frac)
     vis = gt["gt_amodal"] & ~gt["occluder"]
     kind = str(gt["kind"])
-    row = dict(image=f.name, kind=kind, n_pred=len(res.persons), occ_iou=0.0,
+    row = dict(image=f.name, kind=kind, n_pred=len(res.persons), occ_iou=0.0 if gt["gt_occ"].any() else np.nan, fp_ratio=np.nan,
                amodal_iou=0.0, label_acc=np.nan, gt_ratio=gt["gt_occ"].sum() / gt["gt_amodal"].sum())
     if res.persons:
         p = max(res.persons, key=lambda p: (p.modal & vis).sum())
         if (p.modal & vis).sum() > 0:
-            row["occ_iou"] = iou(p.occ, gt["gt_occ"])
+            row["occ_iou"] = iou(p.occ, gt["gt_occ"]) if gt["gt_occ"].any() else np.nan
+            row["fp_ratio"] = (p.occ & ~gt["gt_occ"]).sum() / gt["gt_amodal"].sum()
             row["amodal_iou"] = iou(p.amodal, gt["gt_amodal"])
             both = p.occ & gt["gt_occ"]
             if both.sum():
@@ -56,14 +83,15 @@ for f in sorted((WORK / "synth").glob("*.jpg")):
 with open(out / "results.csv", "w", newline="") as fh:
     w = csv.DictWriter(fh, fieldnames=list(rows[0]))
     w.writeheader(); w.writerows(rows)
-lines = []
-for kind in ("object", "human", "all"):
-    R = [r for r in rows if kind == "all" or r["kind"] == kind]
+lines = [f"open_frac={a.open_frac} dilate_frac={a.dilate_frac}"]
+for kind in ("object", "human", "clean"):
+    R = [r for r in rows if r["kind"] == kind]
     if not R:
         continue
     la = [r["label_acc"] for r in R if not np.isnan(r["label_acc"])]
-    lines.append(f"{kind:7s} n={len(R):3d}  occ IoU {np.mean([r['occ_iou'] for r in R]):.3f}  "
+    lines.append(f"{kind:7s} n={len(R):3d}  occ IoU {np.nanmean([r['occ_iou'] for r in R] + [np.nan]):.3f}  "
+                 f"false-pos ratio {np.nanmean([r['fp_ratio'] for r in R]):.3f}  "
                  f"amodal IoU {np.mean([r['amodal_iou'] for r in R]):.3f}  "
                  f"label acc {np.mean(la) if la else float('nan'):.3f}")
 print("\n".join(lines))
-(out / "summary.txt").write_text("\n".join(lines) + "\n")
+(out / f"summary{a.tag}.txt").write_text("\n".join(lines) + "\n")

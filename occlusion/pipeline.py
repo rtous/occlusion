@@ -5,7 +5,7 @@ import numpy as np
 
 from .body3d import BodyEstimator
 from .modal import ModalSegmenter
-from .render import render_all, render_shaded
+from .render import render_all
 from . import occlusion as occ
 
 
@@ -35,10 +35,10 @@ class Pipeline:
 
     def composite(self, img_bgr, res):
         from .inpaint import Inpainter, background_mask
-        from .compose import compose
+        from .compose import compose, person_layers
         if self._inpainter is None:
             self._inpainter = Inpainter()
         h, w = img_bgr.shape[:2]
         bg = self._inpainter(img_bgr, background_mask(res.modal, img_bgr.shape))
-        color, ids = render_shaded(res.bodies, self.faces, res.K, h, w)
-        return bg, compose(bg, color, ids, res.persons)
+        layers = person_layers(res.bodies, self.faces, res.K, h, w)
+        return bg, compose(bg, layers, res.depths, res.persons)

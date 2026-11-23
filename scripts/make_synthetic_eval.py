@@ -6,6 +6,7 @@ For each image in WORK/images/single (one fully visible person, see select_coco.
     - 'object': an elliptical/rectangular patch cut from another image
     - 'human' : another person's cut-out (from another single image)
   GT occlusion = GT amodal AND occluder alpha.
+  Plus a 'clean' copy (no occluder, GT occlusion empty) to measure false positives.
 Writes WORK/synth/<id>_<kind>.jpg and .npz (gt_amodal, gt_occ, kind).
 """
 import sys
@@ -85,6 +86,10 @@ for i, f in enumerate(keys):
     img, m = people[f]
     H, W = m.shape
     box = bbox(m)
+    # clean copy: no occlusion at all (measures false positives from mesh misfit)
+    cv2.imwrite(str(out / f"{f.stem}_clean.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    np.savez_compressed(out / f"{f.stem}_clean.npz", gt_amodal=m, gt_occ=np.zeros_like(m),
+                        occluder=np.zeros_like(m), kind="clean")
     for kind in ("object", "human"):
         donor = keys[(i + 1 + rng.integers(len(keys) - 1)) % len(keys)]
         if kind == "object":

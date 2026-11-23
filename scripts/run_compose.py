@@ -14,10 +14,10 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from occlusion.config import IMAGES, OUTPUTS, REPO  # noqa: E402
 from occlusion.body3d import Body  # noqa: E402
-from occlusion.render import render_shaded, render_all  # noqa: E402
+from occlusion.render import render_all  # noqa: E402
 from occlusion import occlusion as occ  # noqa: E402
 from occlusion.inpaint import Inpainter, background_mask  # noqa: E402
-from occlusion.compose import compose, naive_compose  # noqa: E402
+from occlusion.compose import compose, person_layers  # noqa: E402
 
 faces = np.load(REPO / "SMPLX_NEUTRAL.npz", allow_pickle=True)["f"].astype(np.int64)
 out = OUTPUTS / "compose"
@@ -42,9 +42,9 @@ for f in sorted(IMAGES.glob("*.jpg")):
     else:
         bg = inp(img, background_mask(modal, img.shape))
         cv2.imwrite(str(bg_file), bg)
-    color, ids = render_shaded(bodies, faces, b["K"], h, w)
-    panel = np.hstack([img, bg, naive_compose(bg, color, ids, persons),
-                       compose(bg, color, ids, persons)])
+    layers = person_layers(bodies, faces, b["K"], h, w)
+    panel = np.hstack([img, bg, compose(bg, layers, depths, persons, handle_occlusion=False),
+                       compose(bg, layers, depths, persons)])
     s = 1600 / panel.shape[1]
     cv2.imwrite(str(out / f.name), cv2.resize(panel, None, fx=s, fy=s, interpolation=cv2.INTER_AREA))
     print(f.name, "done")
