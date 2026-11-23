@@ -13,6 +13,9 @@ bash setup_colab.sh      # deps, Multi-HMR, weights, SMPL files, images (all cac
 bash run_all.sh          # every step skips outputs already on Drive
 ```
 
+If `git log` lacks recent work (commits that were never pushed), restore them from the Drive bundle:
+`git pull /content/drive/MyDrive/occlusion_work/occlusion_repo.bundle main` (then push once credentials are set).
+
 Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 
 | Path | Content |
@@ -56,7 +59,8 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 - Python 3.13: `simple-lama-inpainting` can't be installed (pins numpy 1.26 → source build). We load `big-lama.pt` with `torch.jit.load` instead (`occlusion/inpaint.py`).
 - Multi-HMR uses relative paths (`./models/...`): `occlusion/body3d.py` chdirs into `/content/third_party/multi-hmr` while loading. It pulls DINOv2 code via `torch.hub` (internet needed on first load). xFormers warnings are harmless.
 - Rendering is a small numpy/OpenCV painter's-algorithm rasteriser (`occlusion/render.py`), no OpenGL needed.
-- `git push` needs credentials set up by the user in the session (`gh auth login`); commits may be local only — check `git status` / `git log origin/main..`.
+- `git push` needs credentials set up by the user in the session (`gh auth login`); commits may be local only — check `git log origin/main..`. Until pushed, back them up:
+  `git bundle create /content/drive/MyDrive/occlusion_work/occlusion_repo.bundle origin/main..main`
 
 ## Conventions
 
