@@ -27,6 +27,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--open-frac", type=float, default=0.01)
 ap.add_argument("--dilate-frac", type=float, default=0.03)
 ap.add_argument("--tag", default="", help="suffix for summary file")
+ap.add_argument("--cached-only", action="store_true", help="only score images whose network outputs are cached")
 a = ap.parse_args()
 
 
@@ -45,6 +46,8 @@ for f in sorted((WORK / "synth").glob("*.jpg")):
     img = cv2.imread(str(f))
     h, w = img.shape[:2]
     cf = cache / (f.stem + ".npz")
+    if not cf.exists() and a.cached_only:
+        continue
     if not cf.exists():
         if pipe is None:
             from occlusion.pipeline import Pipeline
