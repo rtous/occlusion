@@ -63,6 +63,13 @@ Old v1 outputs kept on Drive as `outputs/{modal,body3d,occlusion,compose,eval}_v
 cd /content/occlusion && git pull && bash setup_colab.sh && bash run_all.sh   # all cached, fast
 bash paper/build.sh                                                           # rebuild paper/main.pdf
 ```
+**In progress: SAM 3D Body as alternative body model** (user wants both reported; never delete Multi-HMR outputs).
+- Code done (`occlusion/body3d_sam3d.py`, `pipeline.detect_topdown`, `OCC_BODY=sam3d` -> `outputs/*_sam3d`). Multi-HMR re-check gave identical numbers.
+- Blocked on Hugging Face approval of facebook/sam-3d-body-vith for user `rtous` (requested 2026-11-23). In a new session: `! hf auth login` (device code), then `bash setup_colab.sh` caches the checkpoint in `weights/sam-3d-body-vith`.
+- Then: check mesh/image alignment (`OCC_BODY=sam3d python scripts/run_detect.py`, look at `outputs/body3d_sam3d/*.jpg`; verts = pred_vertices + pred_cam_t assumed OpenCV camera frame), run
+  `for D in $I $I/crowd $I/oldframes; do OCC_BODY=sam3d python scripts/run_detect.py --images $D; ... done; OCC_BODY=sam3d python scripts/eval.py`,
+  tune open_frac for it, add a Multi-HMR vs SAM 3D Body row/table to the paper.
+
 Open items (need the user):
 1. Review the paper draft.
 2. Target journal: move to its template; set `\showchangesfalse` in `main.tex` to print the blue (new) text in black.
