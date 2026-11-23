@@ -19,8 +19,8 @@ Per person: **occlusion mask = amodal mask − modal mask**
 | Modal mask (per instance) | People Segmentation (binary) | **YOLO11-seg** (ultralytics) for instances + **SAM 2** box-prompted refinement | pip-installable, robust, per-instance masks (needed for human–human occlusion) |
 | 3D body → amodal mask | OpenPose + SMPLify-X | **Multi-HMR** (multi-person SMPL-X + camera, single pass); fallback **HMR2.0 / 4D-Humans**; alternative **SAM 3D Body** (no SMPL license) | no slow optimisation fitting, one forward pass |
 | Projection | — | **pyrender** (EGL) or a small z-buffer rasteriser | per-person silhouette + joint depth/ID map |
-| Mesh ↔ mask matching | implicit | Hungarian matching on IoU | simple, reliable |
-| Background | SD v1.4 inpainting | **LaMa** (`simple-lama-inpainting`), optional SDXL inpainting | fast, deterministic, no prompts |
+| Mesh ↔ mask matching | implicit | Hungarian matching on IoU, with cross-model detection selection (low thresholds) and SAM fallback | simple, reliable; recovers heavily occluded people |
+| Background | SD v1.4 inpainting | **LaMa** (`big-lama.pt` via TorchScript) | fast, deterministic, no prompts |
 
 Occlusion mask for person i:
 
@@ -44,14 +44,14 @@ Each occluded pixel is labelled:
 
 ```
 occlusion/        modal.py, body3d.py, render.py, occlusion.py, inpaint.py, compose.py
-scripts/          run_pipeline.py, make_synthetic_eval.py, eval.py, make_figures.py
+scripts/          run_detect.py, run_occlusion.py, run_compose.py, make_synthetic_eval.py, eval.py, make_figures.py
 data/             image URL and license list (no images committed)
 setup_colab.sh    installs everything, caches weights on Drive
 ```
 
 Temporary files and checkpoints go in `/content/drive/MyDrive/occlusion_work/`.
 
-## Milestones
+## Milestones (all done as of 2026-11-23; see PROGRESS.md)
 
 1. Environment: GPU runtime, `setup_colab.sh`, weights cached on Drive.
 2. Modal masks: YOLO11 + SAM 2 on sample images, saved for a visual check.
@@ -62,7 +62,7 @@ Temporary files and checkpoints go in `/content/drive/MyDrive/occlusion_work/`.
 
 Commit and push after each step that works.
 
-## Open decisions
+## Decisions taken
 
-- Body model: (a) SMPL-X files (free registration at smpl-x.is.tue.mpg.de, put in Drive; recommended), or (b) SAM 3D Body (MHR model, no registration).
-- A GPU runtime is required.
+- Body model: SMPL-X files (on Drive) with Multi-HMR. SAM 3D Body remains a possible future replacement.
+- GPU runtime (T4); everything also runs on CPU, slowly.

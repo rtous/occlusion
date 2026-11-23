@@ -24,11 +24,12 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | `weights/` | yolo11m-seg, sam2.1_b, big-lama.pt, `multihmr/multiHMR_672_L.pt` + `smpl_mean_params.npz` |
 | `coco/person_keypoints_val2017.json` | used by `scripts/select_coco.py` |
 | `images/` (samples), `images/crowd/` (30), `images/single/` (30) | lists in `data/*.txt` |
-| `images/oldframes/` (30 PNG) | the old paper's movie frames (`scripts/fetch_old_frames.sh`); copyrighted, internal comparison only |
+| `images/oldframes/` (30 PNG) | movie frames (`scripts/fetch_old_frames.sh`), second qualitative set in the paper (films listed in the appendix) |
 | `synth/` | synthetic benchmark (`make_synthetic_eval.py`) |
 | `outputs/{modal,body3d,occlusion,compose,eval}` | per-step outputs; `eval/cache/` holds raw network outputs per synthetic image |
+| `outputs/*_v1` | outputs of the first (single-threshold) detection, kept for the ablation (`eval.py --out eval_v1`) |
 
-## Status (2026-11-23, session 2: GPU T4)
+## Status (2026-11-23, end of session 2, GPU T4): method and paper draft complete
 
 | Milestone | State | Notes |
 |---|---|---|
@@ -38,7 +39,8 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | M5 inpainting + composite | done | LaMa; large holes leave dark smudges (mentioned in paper) |
 | M6 synthetic eval | done | 77 images (30 clean, 26 object, 21 human) |
 | Movie frames | done | 30 frames (`images/oldframes`), used as a second qualitative set in the paper (`figures/movies*.jpg`); NOT compared with the old paper |
-| Figures | done | `scripts/make_figures.py` -> `paper/figures/` (hand-picked COCO crowd images), `diagram.tex` (TikZ) |
+| Figures | done | `scripts/make_figures.py` -> `paper/figures/` (hand-picked COCO crowd images; `--name movies` for the movie frames, see `run_all.sh`), `diagram.tex` (TikZ, built by `paper/build.sh`) |
+| Paper | draft complete | no `\todo` left; see Paper section |
 
 ## Results
 
@@ -59,28 +61,21 @@ Old v1 outputs kept on Drive as `outputs/{modal,body3d,occlusion,compose,eval}_v
 
 ```bash
 cd /content/occlusion && git pull && bash setup_colab.sh && bash run_all.sh   # all cached, fast
+bash paper/build.sh                                                           # rebuild paper/main.pdf
 ```
 Open items (need the user):
-1. Contact author (`\todo` in title). Author order: Tous, Nicolau, Otero.
-2. Journal template; set `\showchangesfalse` for submission. (Related work 2024-2026 done, citations verified online.)
-Possible method improvements (not required): mesh refinement to fit the modal silhouette (main error source = amodal IoU ~0.7).
+1. Review the paper draft.
+2. Target journal: move to its template; set `\showchangesfalse` in `main.tex` to print the blue (new) text in black.
+3. Optional method improvement: refine meshes to fit the modal silhouettes (main error source, amodal IoU ~0.7); try SAM 3D Body instead of Multi-HMR.
 
 ## Paper (`paper/`)
 
 - **User decision: the old paper is unpublished; do NOT compare with it anywhere.** The movie frames are just another qualitative dataset.
-
-- `paper/main.tex` (plain `article` class for now), `paper/references.bib` (old bib + new entries). Build: `bash paper/build.sh`.
-- **After every change to the paper, rebuild the PDF (`bash paper/build.sh`) and commit `paper/main.pdf` with the sources.**
-- Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red). Don't rewrite kept text without asking the user: they wrote it by hand.
-- Figures go in `paper/figures/` (missing ones show as a placeholder box). Needed: occlusion_ex.jpg, diagram.pdf, modal_masks.jpg, meshes.jpg, background.jpg, deocclusion.jpg, qualitative.jpg, cartoon.jpg.
-- Tables 1-2 (results, ablation) filled; remaining `\todo`s: authors, comparison with previous version, old running time, optional related work.
-
-## Next steps (old list, items 1-2 done)
-
-1. Get synthetic eval numbers; sweep `--open-frac` (0.01, 0.02, 0.03, 0.05) and `--dilate-frac`; set the best as default.
-2. `scripts/make_figures.py`: paper-style grid (original | modal | amodal | occlusion | composite) on `images/crowd`.
-3. Optional: other ideas if false positives stay high: only keep object-occlusion components that touch a non-person image edge / strong image edge; or HMR2.0 fallback.
-4. Write the paper (later).
+- Authors: Ruben Tous (contact, ruben.tous@upc.edu), Sebastià Nicolau, Beatriz Otero.
+- `paper/main.tex` (plain `article` class for now), `paper/references.bib`, `paper/figures/` (all generated; `diagram.tex` source). Build: `bash paper/build.sh` (installs TeX Live on a fresh VM).
+- **After every change to the paper, rebuild the PDF and commit `paper/main.pdf` with the sources.**
+- Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red; none left). Don't rewrite the user's kept (black) text without asking.
+- Content: method with cross-model detection, Tables 1 (results) and 2 (ablation: detection, r_o sweep), COCO and movie-frame figures, de-occlusion and cartoon examples, timing, related work up to 2026 (all citations verified online: pix2gestalt, Zhan 2024, Xu 2024, SAMBA, Diffusion-VAS, DMAT, Noh & Chang, SAM 3D Body).
 
 ## Environment gotchas
 
@@ -88,7 +83,7 @@ Possible method improvements (not required): mesh refinement to fit the modal si
 - Python 3.13: `simple-lama-inpainting` can't be installed (pins numpy 1.26 → source build). We load `big-lama.pt` with `torch.jit.load` instead (`occlusion/inpaint.py`).
 - Multi-HMR uses relative paths (`./models/...`): `occlusion/body3d.py` chdirs into `/content/third_party/multi-hmr` while loading. It pulls DINOv2 code via `torch.hub` (internet needed on first load). xFormers warnings are harmless.
 - Rendering is a small numpy/OpenCV painter's-algorithm rasteriser (`occlusion/render.py`), no OpenGL needed.
-- `git push` needs credentials set up by the user in the session (`gh auth login`); commits may be local only — check `git log origin/main..`. Until pushed, back them up:
+- `git push` needs credentials (the user provides a token per session; push with `https://rtous:<token>@github.com/rtous/occlusion.git`, never store it in the repo config); commits may be local only — check `git log origin/main..`. Until pushed, back them up:
   `git bundle create /content/drive/MyDrive/occlusion_work/occlusion_repo.bundle origin/main..main`
 
 ## Conventions

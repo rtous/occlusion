@@ -6,6 +6,7 @@ Refreshed human body occlusion mask estimation (occlusion = amodal − modal). M
 
 1. **Modal masks**: YOLO11-seg person instances, refined with SAM 2 box prompts (`occlusion/modal.py`).
 2. **Amodal masks**: Multi-HMR SMPL-X meshes, projected with a small CPU rasteriser (`occlusion/body3d.py`, `occlusion/render.py`).
+   Both detectors run with a low threshold and cross-check each other; confident meshes without a visible mask get one from SAM 2 (`occlusion.select`, `pipeline.detect`).
 3. **Occlusion masks**: Hungarian matching of masks and meshes, `occ = amodal & ~modal`, each pixel labelled human or object occluded (`occlusion/occlusion.py`).
 4. **Background + composite**: LaMa inpainting, then meshes drawn with the occluded parts erased (`occlusion/inpaint.py`, `occlusion/compose.py`).
 
@@ -47,15 +48,17 @@ To find the parts of a person hidden behind something, we estimate the person's 
 - **Real occlusions are found.** In a street photo, a man behind a sign pole and a pedestrian behind a bin are cut correctly. In a group photo of 13 kids, those standing behind others get their hidden parts marked as *hidden by a person*.
 
 ### What doesn't work well yet
-- **False occlusions from imperfect 3D poses.** When the 3D body's arm or leg is slightly off, the part of the mesh that sticks out beyond the real person looks "hidden" even though nothing hides it. These appear as thin slivers along limbs, for example on the walking people in `bus.jpg`. This is the main weakness, and the old method had the same limitation (it also depended on the fitted mesh).
+- **False occlusions from imperfect 3D poses.** When the 3D body's arm or leg is slightly off, the part of the mesh that sticks out beyond the real person looks "hidden" even though nothing hides it. A morphological opening (tuned on the benchmark) removes most thin slivers, but this remains the main weakness: the mesh overlaps the real body with only ~0.7 IoU.
 - **Tight crops** (half-body shots) give rougher poses, e.g. a wrong arm in `zidane.jpg`.
 - Small objects the segmenter includes in a person (trophies, rackets) leave little gaps.
+- LaMa leaves dark smudges when the hole (all people together) is very large; mostly hidden by the meshes in the composite.
+- A person missed by both detectors (rare) gets no occlusion mask.
 
 ### Numbers (synthetic benchmark, 77 images)
 Occlusion IoU 0.39 (object occluders) / 0.45 (person occluders); occluder type correct for ~98% of pixels; only 2% of a non-occluded body is wrongly marked as occluded. Detecting with both models at a low threshold and cross-checking them fixed most missed, heavily occluded people. Details: `PROGRESS.md`, paper Tables 1-2.
 
-### What's missing
-1. Author list and a side-by-side with the old version on the movie frames (to decide).
-2. Optional: refining meshes to fit the visible masks (the main remaining error).
+### Status
+Method done; paper draft complete (`paper/main.pdf`: method, results and ablation tables, COCO and movie-frame figures, related work up to 2026).
+Next: review by the authors, journal template. Optional: refine meshes to fit the visible masks.
 
 Detailed, technical progress notes: `PROGRESS.md`.
