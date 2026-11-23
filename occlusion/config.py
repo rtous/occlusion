@@ -32,3 +32,10 @@ def device():
 
 for _d in (WEIGHTS, OUTPUTS, IMAGES):
     _d.mkdir(parents=True, exist_ok=True)
+
+
+def list_images(folder):
+    """All .jpg/.jpeg/.png files in a folder (non-recursive), sorted."""
+    from pathlib import Path
+    return sorted(p for p in Path(folder).iterdir()
+                  if p.suffix.lower() in (".jpg", ".jpeg", ".png"))

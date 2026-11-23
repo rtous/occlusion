@@ -24,6 +24,7 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | `weights/` | yolo11m-seg, sam2.1_b, big-lama.pt, `multihmr/multiHMR_672_L.pt` + `smpl_mean_params.npz` |
 | `coco/person_keypoints_val2017.json` | used by `scripts/select_coco.py` |
 | `images/` (samples), `images/crowd/` (30), `images/single/` (30) | lists in `data/*.txt` |
+| `images/oldframes/` (30 PNG) | the old paper's movie frames (`scripts/fetch_old_frames.sh`); copyrighted, internal comparison only |
 | `synth/` | synthetic benchmark (`make_synthetic_eval.py`) |
 | `outputs/{modal,body3d,occlusion,compose,eval}` | per-step outputs; `eval/cache/` holds raw network outputs per synthetic image |
 
@@ -37,6 +38,7 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | M4 occlusion masks | done, needs tuning | Hungarian IoU matching; human vs object label via mesh depth + other people's visible masks |
 | M5 inpainting + composite | done | LaMa TorchScript; composite draws nearest non-occluded mesh per pixel |
 | M6 synthetic eval | running / first numbers pending | `object`, `human`, `clean` variants; metrics: occ IoU, false-positive ratio, amodal IoU, label acc |
+| Old paper frames | running | same pipeline on the 30 movie frames from the old repo, to compare with the old figures |
 | Crowd figure grid | todo | `images/crowd` downloaded; need `scripts/make_figures.py` |
 
 ## Results so far

@@ -41,5 +41,6 @@ fi
 python "$REPO/scripts/download_images.py"
 python "$REPO/scripts/download_images.py" coco_crowd crowd
 python "$REPO/scripts/download_images.py" coco_single single
+bash "$REPO/scripts/fetch_old_frames.sh"   # old paper's 30 movie frames (internal comparison only)
 python -c "import torch; print('GPU:', torch.cuda.is_available())"
 echo "setup done"

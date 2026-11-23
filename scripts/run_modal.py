@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from occlusion.config import IMAGES, OUTPUTS  # noqa: E402
+from occlusion.config import IMAGES, OUTPUTS, list_images  # noqa: E402
 from occlusion.modal import ModalSegmenter, overlay  # noqa: E402
 
 ap = argparse.ArgumentParser()
@@ -19,12 +19,12 @@ a = ap.parse_args()
 out = OUTPUTS / "modal"
 out.mkdir(parents=True, exist_ok=True)
 seg = ModalSegmenter(use_sam=not a.no_sam)
-for f in sorted(Path(a.images).glob("*.jpg")):
+for f in list_images(a.images):
     if not a.force and (out / (f.stem + ".npz")).exists():
         continue
     img = cv2.imread(str(f))
     persons = seg(img)
-    cv2.imwrite(str(out / f.name), overlay(img, persons))
+    cv2.imwrite(str(out / (f.stem + ".jpg")), overlay(img, persons))
     np.savez_compressed(out / (f.stem + ".npz"),
                         boxes=np.array([p.box for p in persons]).reshape(-1, 4),
                         masks=np.array([p.mask for p in persons]))

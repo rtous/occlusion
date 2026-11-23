@@ -5,6 +5,7 @@ Writes WORK/outputs/compose/<img>.jpg:
   original | inpainted background | meshes without occlusion handling | de-occluded meshes
 and <img>_bg.png (the inpainted background).
 """
+import argparse
 import sys
 from pathlib import Path
 
@@ -12,7 +13,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from occlusion.config import IMAGES, OUTPUTS, REPO  # noqa: E402
+from occlusion.config import IMAGES, OUTPUTS, REPO, list_images  # noqa: E402
 from occlusion.body3d import Body  # noqa: E402
 from occlusion.render import render_all  # noqa: E402
 from occlusion import occlusion as occ  # noqa: E402
@@ -23,7 +24,10 @@ faces = np.load(REPO / "SMPLX_NEUTRAL.npz", allow_pickle=True)["f"].astype(np.in
 out = OUTPUTS / "compose"
 out.mkdir(parents=True, exist_ok=True)
 inp = Inpainter()
-for f in sorted(IMAGES.glob("*.jpg")):
+ap = argparse.ArgumentParser()
+ap.add_argument("--images", default=str(IMAGES))
+a = ap.parse_args()
+for f in list_images(a.images):
     fm, fb = OUTPUTS / "modal" / (f.stem + ".npz"), OUTPUTS / "body3d" / (f.stem + ".npz")
     if not (fm.exists() and fb.exists()):
         print("skip", f.name)
@@ -46,6 +50,6 @@ for f in sorted(IMAGES.glob("*.jpg")):
     panel = np.hstack([img, bg, compose(bg, layers, depths, persons, handle_occlusion=False),
                        compose(bg, layers, depths, persons)])
     s = 1600 / panel.shape[1]
-    cv2.imwrite(str(out / f.name), cv2.resize(panel, None, fx=s, fy=s, interpolation=cv2.INTER_AREA))
+    cv2.imwrite(str(out / (f.stem + ".jpg")), cv2.resize(panel, None, fx=s, fy=s, interpolation=cv2.INTER_AREA))
     print(f.name, "done")
 print("outputs in", out)

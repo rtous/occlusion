@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from occlusion.config import IMAGES, OUTPUTS  # noqa: E402
+from occlusion.config import IMAGES, OUTPUTS, list_images  # noqa: E402
 from occlusion.body3d import BodyEstimator  # noqa: E402
 from occlusion.render import render_all, overlay_meshes  # noqa: E402
 
@@ -21,7 +21,7 @@ a = ap.parse_args()
 out = OUTPUTS / "body3d"
 out.mkdir(parents=True, exist_ok=True)
 est = BodyEstimator()
-files = sorted(Path(a.images).glob("*.jpg"))
+files = list_images(a.images)
 if a.only:
     files = [f for f in files if f.name == a.only]
 for f in files:
@@ -33,7 +33,7 @@ for f in files:
     bodies, K = est(img)
     t1 = time.time()
     depths, ids = render_all(bodies, est.faces, K, h, w)
-    cv2.imwrite(str(out / f.name), np.hstack([img, overlay_meshes(img, ids)]))
+    cv2.imwrite(str(out / (f.stem + ".jpg")), np.hstack([img, overlay_meshes(img, ids)]))
     np.savez_compressed(out / (f.stem + ".npz"), K=K,
                         verts=np.array([b.verts for b in bodies], np.float32),
                         scores=np.array([b.score for b in bodies]))
