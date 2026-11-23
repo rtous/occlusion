@@ -37,7 +37,7 @@ Everything that isn't code lives in `/content/drive/MyDrive/occlusion_work/`:
 | M4 occlusion masks | done | `open_frac` tuned: **0.02** (default now); `dilate_frac` has no effect |
 | M5 inpainting + composite | done | LaMa; large holes leave dark smudges (mentioned in paper) |
 | M6 synthetic eval | done | 77 images (30 clean, 26 object, 21 human) |
-| Old paper frames | done | outputs on Drive (`outputs/{occlusion,compose}/vlcsnap-*`), internal only |
+| Movie frames | done | 30 frames (`images/oldframes`), used as a second qualitative set in the paper (`figures/movies*.jpg`); NOT compared with the old paper |
 | Figures | done | `scripts/make_figures.py` -> `paper/figures/` (hand-picked COCO crowd images), `diagram.tex` (TikZ) |
 
 ## Results
@@ -61,12 +61,13 @@ Old v1 outputs kept on Drive as `outputs/{modal,body3d,occlusion,compose,eval}_v
 cd /content/occlusion && git pull && bash setup_colab.sh && bash run_all.sh   # all cached, fast
 ```
 Open items (need the user):
-1. Author list (`\todo` in title).
-2. Comparison with the previous version on the movie frames: frames are copyrighted; the old paper showed them. Ask whether to include side-by-side figures (outputs exist on Drive) and whether old running times are known.
-3. Optionally more 2024-2026 related work; journal template.
+1. Contact author (`\todo` in title). Author order: Tous, Nicolau, Otero.
+2. Optionally more 2024-2026 related work; journal template.
 Possible method improvements (not required): mesh refinement to fit the modal silhouette (main error source = amodal IoU ~0.7).
 
 ## Paper (`paper/`)
+
+- **User decision: the old paper is unpublished; do NOT compare with it anywhere.** The movie frames are just another qualitative dataset.
 
 - `paper/main.tex` (plain `article` class for now), `paper/references.bib` (old bib + new entries). Build: `bash paper/build.sh`.
 - **After every change to the paper, rebuild the PDF (`bash paper/build.sh`) and commit `paper/main.pdf` with the sources.**

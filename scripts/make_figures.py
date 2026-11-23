@@ -30,6 +30,8 @@ ap.add_argument("--images", default=str(IMAGES / "crowd"))
 ap.add_argument("--n-qual", type=int, default=6)
 ap.add_argument("--qual", default="000000247917,000000363666,000000281759,000000203389,000000306139,000000090891", help="comma-separated stems for the qualitative grid")
 ap.add_argument("--pick", default="000000247917,000000363666,000000281759", help="comma-separated stems for the single-image figures")
+ap.add_argument("--name", default="", help="only write <name>.jpg (occlusion grid of --qual) and "
+                "<name>_deocclusion.jpg (composites of --pick), e.g. for the movie frames")
 ap.add_argument("--out", default=str(REPO / "paper" / "figures"))
 a = ap.parse_args()
 FIG = Path(a.out)
@@ -98,18 +100,19 @@ qual = a.qual.split(",") if a.qual else ranked[:a.n_qual]
 pick = a.pick.split(",") if a.pick else ranked[:3]
 print("qualitative:", qual, "\npick:", pick)
 
-save("qualitative.jpg", stack([occ_row(res[k]) for k in qual]))
-save("occlusion_ex.jpg", occ_row(res[pick[0]]))
-save("modal_masks.jpg", row([overlay(res[k]["img"], [type("P", (), {"mask": m}) for m in res[k]["modal"]])
-                             for k in pick]))
-save("meshes.jpg", row([overlay_meshes(res[k]["img"], res[k]["ids"]) for k in pick]))
+save((a.name or "qualitative") + ".jpg", stack([occ_row(res[k]) for k in qual]))
+if not a.name:
+    save("occlusion_ex.jpg", occ_row(res[pick[0]]))
+    save("modal_masks.jpg", row([overlay(res[k]["img"], [type("P", (), {"mask": m}) for m in res[k]["modal"]])
+                                 for k in pick]))
+    save("meshes.jpg", row([overlay_meshes(res[k]["img"], res[k]["ids"]) for k in pick]))
 
 # background / de-occlusion / cartoon need the inpainted background (cached by run_compose.py)
 from occlusion.inpaint import Inpainter, background_mask  # noqa: E402
 from occlusion.compose import compose, person_layers  # noqa: E402
 inp = None
 rows_d, rows_b, rows_c = [], [], []
-for k in pick[:2]:
+for k in (pick if a.name else pick[:2]):
     r = res[k]
     i = r["img"]
     h, w = i.shape[:2]
@@ -127,6 +130,9 @@ for k in pick[:2]:
                        compose(bg, layers, r["depths"], r["persons"])]))
     toon = cv2.stylization(bg, sigma_s=60, sigma_r=0.45)
     rows_c.append(row([i, compose(toon, layers, r["depths"], r["persons"])]))
-save("background.jpg", rows_b[0])
-save("deocclusion.jpg", stack(rows_d))
-save("cartoon.jpg", stack(rows_c, width=1600))
+if a.name:
+    save(a.name + "_deocclusion.jpg", stack(rows_d))
+else:
+    save("background.jpg", rows_b[0])
+    save("deocclusion.jpg", stack(rows_d))
+    save("cartoon.jpg", stack(rows_c, width=1600))
