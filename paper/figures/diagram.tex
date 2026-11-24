@@ -6,7 +6,7 @@
 \begin{tikzpicture}[
   box/.style={draw, rounded corners, align=center, minimum height=12mm, text width=32mm, fill=#1},
   box/.default=white, >={Stealth[length=2.2mm]}]
-  \node[box=gray!12]   (img)  at (0,0)    {Input image};
+  \node[box=gray!12, text width=18mm] (img) at (0,0) {Input image};
   \node[box=blue!10]   (modal) at (3.8,1.2) {Modal masks\\\footnotesize YOLO11 + SAM 2\\(+ Multi-HMR detections)};
   \node[box=green!10]  (hmr)  at (3.8,-1.2) {3D bodies\\\footnotesize SAM 3D Body\\(box + mask prompts)};
   \node[box=green!10]  (proj) at (7.6,-1.2) {Amodal masks\\\footnotesize projected silhouettes + depth};
