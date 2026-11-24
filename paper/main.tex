@@ -105,25 +105,11 @@ People are first detected and roughly segmented with the YOLO11 instance segment
 % ======================================================================
 \section{Amodal mask estimation}
 \label{section:amodal}
+The amodal mask is the region that each person would cover if nothing were occluding it. Estimating it is considerably more difficult than estimating the modal mask, and can even be considered a generative task, since the hidden parts of the body have to be hallucinated.
 
-Amodal mask estimation is considerably more difficult than modal mask building and can even be considered a generative task. In this study, we employ two amodal datasets to implement a simple solution method that we intensively assessed below.
+A direct approach is to train an amodal instance segmentation model. In preliminary experiments we trained the Occlusion-aware R-CNN (ORCNN) \citep{orcnn}, an extension of Mask R-CNN that predicts both the modal and the amodal mask of each instance, on two amodal human datasets: the Amodal Human Perception dataset (AHP) \citep{AHPdataset}, which gathers about 57,000 real images of people from COCO, VOC, Objects365 \citep{shao2019objects365}, LIP and OpenImages but contains relatively few occlusions, and SAIL-VOS \citep{sailvos}, a synthetic video dataset extracted from a video game, with many occlusions and varied poses but less diversity in age and gender. The training on SAIL-VOS gave better results, especially for standing people, but in both cases the amodal masks were coarse and contained false positives, and the resulting occlusion masks were not accurate enough for our purposes, in line with the results reported in \citep{orcnn}.
 
-\subsection{Amodal image datasets}
-
-The Amodal Human Perception dataset was first introduced in \citep{AHPdataset} by compiling human images from several datasets obtaining a total of 56995 training examples. These large-scale datasets correspod to COCO, VOC (w/ SBD), Objects365 \citep{shao2019objects365}, LIP \footnote{https://github.com/topics/lip-dataset}, and OpenImages\footnote{https://github.com/openimages/dataset}. The ample image variability in these datasets allow a diverse sampling of genders, age, and poses, but with we a reduced number of occlusions. The synthetic dataset SAIL-VOS \citep{sailvos} includes 201 video sequences and 111,654 frames, extracted from the photorealistic video game GTA-V. SAIL-VOS images offer a large number of occlusions with various poses and perspectives, but present lower diversity in terms of age and gender.
-
-\subsection{Models}
-In reference to the article \citep{orcnn}, we investigate the Occlusion-aware R-CNN (ORCNN) algorithm, which is an end-to-end approach for amodal instance segmentation. Our objective is to train a Mask R-CNN model using the amodal AHP and SAIL-VOS datasets previously mentioned, and evaluate the obtained results. Experimentation starts with the AHP dataset with initial weights produced by the Mask R-CNN ResNet50-FPN model. The training process is conducted with a maximum learning rate of 0.005 over 10000 iterations using a batch size of 4 images.
-The obtained amodal masks are not entirely accurate, with some false positives appearing in the estimated amodal masks, lacking precision in the overall quality.
-
-We retrain the model following same approach, but using this time the SAIL-VOS dataset. Results have improved, particularly for standing poses. However, the overall quality of amodal masks is still relatively low, presenting some false positives.
-
-Based on these results, we confirm that our simple approach does not completely satisfies our goals. The approximation of occlusion masks is still not accurate enough. Thus, we proceed to implement a more robust method that takes into account all human body parts that should appear in the  occlusion mask, similar to DensePose technique. Considering the limited robustness of this method, results are similar to those found in \citep{orcnn}. Nonetheless, these are not sufficient to satisfy our objectives and will be disregarded in the subsequent sections of this study.
-
-\subsection{Amodal masks from 3D body reconstruction}
-\label{section:amodal3d}
-Although occlusion masks are useful in various applications, in this work the target application is to replace human figures with 3D meshes in photos or videos.
-A posed 3D model of each person appearing in the scene is computed with a 3D Human Pose Estimation algorithm and projected in 2D onto the image. The fact of having the reconstructed 3D shape of the body offers us an alternative way for calculating the occlusion mask in this type of applications. Since our results in calculating the amodal mask with ORCNN were not fully satisfactory, we instead use 2D projections of the 3D mesh as the amodal mask.
+We therefore follow a different path that exploits the target application. Since the human figures are going to be replaced by posed 3D meshes, a 3D model of each person is computed anyway, and its 2D projection onto the image provides a complete silhouette of the body, including the occluded parts, which we use as the amodal mask. Moreover, the 3D bodies provide the depth of each person, which tells who is in front of whom.
 
 A classical way to obtain the 3D body, used for instance in \citep{tous2023}, starts by extracting the 2D keypoints of each person with OpenPose \citep{Openpose} and then fitting a SMPL-X model \citep{SMPL-X:2019} to them with SMPLify-X, an optimisation that minimises the distance between the detected keypoints and the 2D projection of the posed model. This fitting is slow, runs independently for every person and requires installing and chaining two different tools.
 
