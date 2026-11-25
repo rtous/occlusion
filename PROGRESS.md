@@ -35,11 +35,13 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
   (5 rows: 3 movie frames + kitchen `397354` + restaurant `363666`; original | meshes | characters). Everything worked first time:
   MHR70 names found, no vertex-mismatch warnings, apt Blender is 4.0.2 (EEVEE via surfaceless EGL, EGL error messages harmless).
   `setup_colab.sh` now runs `apt-get update` before installing Blender (stale index gave 404s). Fig. 7 caption and the paragraph
-  before it in `paper_v2/main.tex` updated; PDF rebuilt. The colleague's `paper_v2/scripts/*.py` are obsolete (could be deleted).
+  before it in `paper_v2/main.tex` updated; PDF rebuilt. 
   Then the user added `models/kate.fbx` and `models/megan.fbx` (rig prefixes `mixamorig:` / `mixamorig2:`); at their request drake
   was replaced by kate: `--models` default is now elisabeth, joe, kate, remy, shae (megan unused, drake kept in `models/`).
   Fig. 7 text: Pictonaut is cited as the motivating application only; the figure is described as our own simple procedure
   (user request: keep Pictonaut references but not tied to the Fig. 7 images).
+  paper_v2/scripts/ (colleague scripts) deleted. User decision: no link to this repo in the paper; code/data "available upon
+  request" (Code/Data availability + conclusions). The snicolau repo link for the movie-frame list is kept.
   Possible polish if the user wants: character choice per person (round-robin over `--models`), `--erase-frac`.
 
 ## Status (2026-11-23, end of session 2): method done, paper draft complete
