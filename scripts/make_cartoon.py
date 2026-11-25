@@ -8,7 +8,7 @@ and masks (the caches keep the vertices but not the keypoints); the new bodies a
 the cached ones by their vertices.
 
 Writes paper_v2/figures/cartoonization.jpg (one row per image: original | de-occluded meshes |
-de-occluded characters, cartoon-filtered) and WORK/outputs/cartoon/<img>.png.
+de-occluded characters over the cartoon-filtered background) and WORK/outputs/cartoon/<img>.png.
 """
 import argparse
 import glob
@@ -40,7 +40,7 @@ ap.add_argument("--erase-frac", type=float, default=0.03,
                 help="object-occlusion masks are dilated by this fraction of the person height, "
                      "because the character silhouette differs from the body mesh")
 ap.add_argument("--blender", default="blender")
-ap.add_argument("--no-filter", action="store_true", help="do not apply the cartoon filter to the character column")
+ap.add_argument("--no-filter", action="store_true", help="do not apply the cartoon filter to the background of the character column")
 ap.add_argument("--out", default=str(REPO / "paper_v2" / "figures" / "cartoonization.jpg"))
 a = ap.parse_args()
 OUT = OUTPUTS / "cartoon"
@@ -136,6 +136,7 @@ for f in map(Path, a.images):
 
     # composite: per pixel the nearest character that is not occluded there
     out = bg.astype(np.float32)
+    A = np.zeros(out.shape[:2], np.float32)              # character coverage (cartoon filter only on the background)
     layers, alphas, dist = [], [], []
     for n, p in enumerate(persons):
         rgba = cv2.resize(cv2.imread(job["persons"][n]["out"], cv2.IMREAD_UNCHANGED), (W, H),
@@ -155,9 +156,10 @@ for f in map(Path, a.images):
         for n in order:                                  # far to near, nearest wins where overlapping
             al = alphas[n] * ((front == n) | none)
             out = out * (1 - al[..., None]) + layers[n] * al[..., None]
+            A = A + al * (1 - A)
     out = out.clip(0, 255).astype(np.uint8)
     cv2.imwrite(str(OUT / (f.stem + ".png")), out)
-    rows.append((img, meshes, out))
+    rows.append((img, meshes, out, A))
     print(f.name, len(persons), "characters")
 
 G, Wt = 6, 600                                           # tile width, as in the previous figure
@@ -165,8 +167,9 @@ lines = []
 for tiles in rows:
     h = round(tiles[0].shape[0] * Wt / tiles[0].shape[1])
     t = [cv2.resize(x, (Wt, h), interpolation=cv2.INTER_AREA) for x in tiles]
-    if not a.no_filter:
-        t[2] = cartoon(t[2])
+    if not a.no_filter:                                  # cartoonize the background only, keep the characters
+        al = t[3][..., None]
+        t[2] = (cartoon(t[2]) * (1 - al) + t[2] * al).clip(0, 255).astype(np.uint8)
     sep = np.full((h, G, 3), 255, np.uint8)
     lines.append(np.hstack([t[0], sep, t[1], sep, t[2]]))
 fig = np.vstack(sum([[r, np.full((G, r.shape[1], 3), 255, np.uint8)] for r in lines], [])[:-1])
