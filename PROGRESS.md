@@ -43,7 +43,7 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
   paper_v2/scripts/ (colleague scripts) deleted. User decision: no link to this repo in the paper; code/data "available upon
   request" (Code/Data availability + conclusions). The snicolau repo link for the movie-frame list is kept.
   Fig. 7 third column now gets a cartoon filter (`cartoon()` in make_cartoon.py, ported from the deleted colleague script
-  cartoon2.py: bilateral x3, k-means k=24 in Lab, Canny edges; `--no-filter` to disable); caption updated.
+  cartoon2.py, then made stronger because k=24 was invisible at print size: bilateral x4, k-means k=8 in Lab, adaptive-threshold ink lines; `--no-filter` to disable); caption updated.
   User request: the filter is applied to the background only (blended with the character alpha), characters stay as rendered.
   Possible polish if the user wants: character choice per person (round-robin over `--models`), `--erase-frac`.
 

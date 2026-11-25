@@ -73,21 +73,21 @@ def joints_from_kp(kp, names):
     return out
 
 
-def cartoon(img, k=24):
-    """Non-photorealistic filter (applied to the 600-px tiles): bilateral smoothing, k-means colour
-    quantisation in Lab and dark Canny edges (small edge fragments removed)."""
+def cartoon(img, k=8):
+    """Non-photorealistic filter (applied to the 600-px tiles, strong enough to be visible at print size):
+    bilateral smoothing, k-means colour quantisation in Lab and adaptive-threshold ink lines."""
     s = img.copy()
-    for _ in range(3):
-        s = cv2.bilateralFilter(s, 7, 45, 5)
+    for _ in range(4):
+        s = cv2.bilateralFilter(s, 9, 75, 75)
     Z = cv2.cvtColor(s, cv2.COLOR_BGR2LAB).reshape(-1, 3).astype(np.float32)
     cv2.setRNGSeed(0)
     _, lab, cen = cv2.kmeans(Z, k, None, (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.5), 3,
                              cv2.KMEANS_PP_CENTERS)
-    q = cv2.cvtColor(cen.astype(np.uint8)[lab.flatten()].reshape(s.shape), cv2.COLOR_LAB2BGR)
-    q = cv2.medianBlur(q, 3)
-    e = cv2.Canny(cv2.GaussianBlur(cv2.cvtColor(s, cv2.COLOR_BGR2GRAY), (3, 3), 0), 50, 130)
+    q = cv2.medianBlur(cv2.cvtColor(cen.astype(np.uint8)[lab.flatten()].reshape(s.shape), cv2.COLOR_LAB2BGR), 5)
+    g = cv2.medianBlur(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 7)
+    e = (cv2.adaptiveThreshold(g, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 4) == 0).astype(np.uint8)
     n, lbl, st, _ = cv2.connectedComponentsWithStats(e, 8)
-    q[np.isin(lbl, np.where(st[:, cv2.CC_STAT_AREA] >= 20)[0][1:])] = (25, 25, 25)
+    q[np.isin(lbl, np.where(st[:, cv2.CC_STAT_AREA] >= 30)[0][1:])] = (20, 20, 20)   # drop specks
     return q
 
 
