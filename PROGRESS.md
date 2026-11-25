@@ -31,13 +31,12 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
 - Done: `scripts/blender_mixamo.py` (retargeting + EEVEE render, verified locally with Blender 5.2 on SMPL-X test poses: all 5
   characters follow the poses; bone tails in these FBX files are arbitrary, so directions are measured between bone heads) and
   `scripts/make_cartoon.py` (rewritten, untested: needs GPU + Drive caches).
-- **Next (Colab):** `python scripts/make_cartoon.py` (setup_colab.sh installs apt Blender). Things to check on the first run:
-  (1) MHR70 keypoint names are read from the SAM 3D Body repo (`mhr70*.py`, `pose_info["keypoint_info"]`); the code expects
-  `neck`, `left_ear`, `left_eye`, `left_shoulder`... `left_big_toe`, `left_small_toe` and a `left_..middle..` finger keypoint;
-  (2) re-running SAM 3D Body with the cached boxes/masks should reproduce the cached vertices (warning printed otherwise);
-  (3) apt Blender is old (3.x): the script avoids new APIs, but check; (4) look at the figure (character choice per person is
-  round-robin over `--models`; object-occlusion erase dilation `--erase-frac`). Then update the Fig. 7 caption in
-  `paper_v2/main.tex` (it still describes the OpenCV filter) and rebuild with `bash paper_v2/build.sh`.
+- Session 4 (2026-11-25, Colab T4): ran `python scripts/make_cartoon.py` (defaults) -> `paper_v2/figures/cartoonization.jpg`
+  (5 rows: 3 movie frames + kitchen `397354` + restaurant `363666`; original | meshes | characters). Everything worked first time:
+  MHR70 names found, no vertex-mismatch warnings, apt Blender is 4.0.2 (EEVEE via surfaceless EGL, EGL error messages harmless).
+  `setup_colab.sh` now runs `apt-get update` before installing Blender (stale index gave 404s). Fig. 7 caption and the paragraph
+  before it in `paper_v2/main.tex` updated; PDF rebuilt. The colleague's `paper_v2/scripts/*.py` are obsolete (could be deleted).
+  Possible polish if the user wants: character choice per person (round-robin over `--models`), `--erase-frac`.
 
 ## Status (2026-11-23, end of session 2): method done, paper draft complete
 
@@ -53,7 +52,7 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
 | Synthetic benchmark | done | 77 images (30 clean, 26 object, 21 human), `scripts/make_synthetic_eval.py`, `scripts/eval.py` |
 | Figures | done | `scripts/make_figures.py` (COCO groups + `--name movies --intro` for movie frames / Figure 1), `scripts/make_compare.py` (Multi-HMR vs SAM 3D Body), `paper_v2/figures/diagram.tex` |
 | Paper | draft complete | no `\todo` left; waiting for the user's review |
-| Cartoon figure (paper_v2 Fig. 7) | code ready, **needs a Colab run** | `scripts/make_cartoon.py`: re-runs SAM 3D Body with the cached boxes/masks to get the MHR70 3D keypoints, poses the Mixamo characters `models/*.fbx` with `scripts/blender_mixamo.py` (direction-based retargeting from joint positions, tested on the Mac with SMPL-X poses, all 5 characters OK) and composites them with the occlusion masks -> `paper_v2/figures/cartoonization.jpg` (original | meshes | characters). Run on Colab: `python scripts/make_cartoon.py --blender <blender>`; then check the figure and update its caption in `paper_v2/main.tex` |
+| Cartoon figure (paper_v2 Fig. 7) | done (session 4) | `scripts/make_cartoon.py`: re-runs SAM 3D Body with the cached boxes/masks to get the MHR70 3D keypoints, poses the Mixamo characters `models/*.fbx` with `scripts/blender_mixamo.py` (direction-based retargeting from joint positions, tested on the Mac with SMPL-X poses, all 5 characters OK) and composites them with the occlusion masks -> `paper_v2/figures/cartoonization.jpg` (original | meshes | characters). Run on Colab: `python scripts/make_cartoon.py --blender <blender>`; then check the figure and update its caption in `paper_v2/main.tex` |
 
 ## Results (synthetic benchmark, open_frac 0.02)
 
@@ -110,7 +109,7 @@ Output folders are chosen by `occlusion.config.out_dir()` from `OCC_BODY` (defau
 
 ## Next steps (need the user)
 
-1. Fig. 7 with the Mixamo characters (see Session 3 above).
+1. User review of Fig. 7 (Mixamo characters) and of the paper_v2 text.
 2. Optional improvements: refine meshes to fit the modal silhouettes (main remaining error, amodal IoU ~0.8);
    faster SAM 3D Body (`inference_type="body"`, skips the hand decoder).
 

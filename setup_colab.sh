@@ -45,7 +45,7 @@ if [ ! -s $W/sam-3d-body-vith/model.ckpt ]; then
 fi
 
 # --- Blender (Ubuntu package) for the cartoonization figure (scripts/make_cartoon.py) ---
-command -v blender >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends blender >/dev/null
+command -v blender >/dev/null || { apt-get -qq update >/dev/null; DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends blender >/dev/null; }
 
 # --- Images: samples, COCO crowd (qualitative) and single-person (synthetic eval) ---
 mkdir -p "$WORK/coco"
