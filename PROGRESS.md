@@ -26,7 +26,7 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
   The colleague's `paper_v2/scripts/*.py` made the current Fig. 7 (`cartoonization.jpg`: original | composite | OpenCV cartoon filter
   of the composite) by cropping existing figure JPEGs; they have hard-coded `/home/claude/...` paths and are now superseded.
 - **Goal set by the user:** Fig. 7 must show tailored 3D characters instead of the colour meshes. Characters: `models/*.fbx`
-  (drake, elisabeth, joe, remy, shae; all Mixamo rigs, bone prefixes `mixamorig:` / `mixamorig1:` / `mixamorig7:`).
+  (drake, elisabeth, joe, remy, shae, later kate and megan; all Mixamo rigs, bone prefixes `mixamorig:` / `mixamorig1:` / `mixamorig7:`).
   The old SMPL-X-rigged `.blend` characters were deleted by the user.
 - Done: `scripts/blender_mixamo.py` (retargeting + EEVEE render, verified locally with Blender 5.2 on SMPL-X test poses: all 5
   characters follow the poses; bone tails in these FBX files are arbitrary, so directions are measured between bone heads) and
@@ -36,6 +36,8 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
   MHR70 names found, no vertex-mismatch warnings, apt Blender is 4.0.2 (EEVEE via surfaceless EGL, EGL error messages harmless).
   `setup_colab.sh` now runs `apt-get update` before installing Blender (stale index gave 404s). Fig. 7 caption and the paragraph
   before it in `paper_v2/main.tex` updated; PDF rebuilt. The colleague's `paper_v2/scripts/*.py` are obsolete (could be deleted).
+  Then the user added `models/kate.fbx` and `models/megan.fbx` (rig prefixes `mixamorig:` / `mixamorig2:`); at their request drake
+  was replaced by kate: `--models` default is now elisabeth, joe, kate, remy, shae (megan unused, drake kept in `models/`).
   Possible polish if the user wants: character choice per person (round-robin over `--models`), `--erase-frac`.
 
 ## Status (2026-11-23, end of session 2): method done, paper draft complete

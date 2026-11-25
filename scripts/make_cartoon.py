@@ -33,7 +33,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--images", nargs="+", default=[str(IMAGES / "oldframes" / f"{V}{t}.png") for t in
                                                 ("20h01m24s874", "19h34m02s125", "19h56m40s250")] +
                 [str(IMAGES / "crowd" / f"{s}.jpg") for s in ("000000397354", "000000363666")])
-ap.add_argument("--models", nargs="+", default=sorted(str(p) for p in (REPO / "models").glob("*.fbx")))
+ap.add_argument("--models", nargs="+", default=[str(REPO / "models" / f"{m}.fbx") for m in
+                                                ("elisabeth", "joe", "kate", "remy", "shae")])
 ap.add_argument("--max-side", type=int, default=1280, help="render resolution (longest side)")
 ap.add_argument("--erase-frac", type=float, default=0.03,
                 help="object-occlusion masks are dilated by this fraction of the person height, "
