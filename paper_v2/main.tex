@@ -170,7 +170,7 @@ One direct application of these results is the automatic cartoonization of image
 \begin{figure*}
   \centering
   \safeincludegraphics[width=\textwidth]{figures/cartoonization.jpg}
-  \caption{Application to image cartoonization. From left to right: original image, de-occluded composite (SAM 3D Body meshes over the inpainted background) and the same composite with each person replaced by a 3D character (Mixamo characters posed with the SAM 3D Body keypoints and rendered with Blender). In both composites the occluded parts are hidden with the estimated occlusion masks. The characters are assigned arbitrarily, for illustration purposes only.}
+  \caption{Application to image cartoonization. From left to right: original image, de-occluded composite (SAM 3D Body meshes over the inpainted background) and the cartoonized result: each person is replaced by a 3D character (Mixamo characters posed with the SAM 3D Body keypoints and rendered with Blender) and a simple non-photorealistic filter (edge-preserving smoothing, colour quantisation and edge overlay) is applied to the whole image. In both composites the occluded parts are hidden with the estimated occlusion masks. The characters are assigned arbitrarily, for illustration purposes only.}
   \label{fig:cartoonization}
 \end{figure*}
 

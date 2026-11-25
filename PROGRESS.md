@@ -42,6 +42,8 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
   (user request: keep Pictonaut references but not tied to the Fig. 7 images).
   paper_v2/scripts/ (colleague scripts) deleted. User decision: no link to this repo in the paper; code/data "available upon
   request" (Code/Data availability + conclusions). The snicolau repo link for the movie-frame list is kept.
+  Fig. 7 third column now gets a cartoon filter (`cartoon()` in make_cartoon.py, ported from the deleted colleague script
+  cartoon2.py: bilateral x3, k-means k=24 in Lab, Canny edges; `--no-filter` to disable); caption updated.
   Possible polish if the user wants: character choice per person (round-robin over `--models`), `--erase-frac`.
 
 ## Status (2026-11-23, end of session 2): method done, paper draft complete
