@@ -34,7 +34,7 @@ bash paper/build.sh      # rebuild paper/main.pdf (installs TeX Live on a fresh 
 | Synthetic benchmark | done | 77 images (30 clean, 26 object, 21 human), `scripts/make_synthetic_eval.py`, `scripts/eval.py` |
 | Figures | done | `scripts/make_figures.py` (COCO groups + `--name movies --intro` for movie frames / Figure 1), `scripts/make_compare.py` (Multi-HMR vs SAM 3D Body), `paper/figures/diagram.tex` |
 | Paper | draft complete | no `\todo` left; waiting for the user's review |
-| Cartoon figure | removed (user: looked bad) | scripts kept: `scripts/make_cartoon.py` + `scripts/blender_cartoon.py` (user's toon characters `models/*.blend` with SMPL-X rig, posed with Multi-HMR rotvecs, Blender 4.0 from apt, EEVEE headless). `models/*.fbx` unused (Mixamo rig) |
+| Cartoon figure (paper_v2 Fig. 7) | code ready, **needs a Colab run** | `scripts/make_cartoon.py`: re-runs SAM 3D Body with the cached boxes/masks to get the MHR70 3D keypoints, poses the Mixamo characters `models/*.fbx` with `scripts/blender_mixamo.py` (direction-based retargeting from joint positions, tested on the Mac with SMPL-X poses, all 5 characters OK) and composites them with the occlusion masks -> `paper_v2/figures/cartoonization.jpg` (original | meshes | characters). Run on Colab: `python scripts/make_cartoon.py --blender <blender>`; then check the figure and update its caption in `paper_v2/main.tex` |
 
 ## Results (synthetic benchmark, open_frac 0.02)
 
@@ -74,7 +74,9 @@ Code in the repo; everything else in `/content/drive/MyDrive/occlusion_work/`:
 
 Output folders are chosen by `occlusion.config.out_dir()` from `OCC_BODY` (default `sam3d`).
 
-## Paper (`paper/`)
+## Paper (`paper_v1/` = first version, `paper_v2/` = current, Springer `sn-jnl` class, edited by a colleague)
+
+- paper_v2 build: `cd paper_v2 && pdflatex main && bibtex main && pdflatex main && pdflatex main` (diagram: `cd figures && pdflatex diagram.tex`)
 
 - **User decision: the old paper is unpublished; do NOT compare with it anywhere.** The movie frames are just another qualitative dataset.
 - Authors: Ruben Tous (contact, ruben.tous@upc.edu), Beatriz Otero, Sebastià Nicolau.

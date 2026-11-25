@@ -22,7 +22,8 @@ MODEL_NAME = "multiHMR_672_L"
 class Body:
     verts: np.ndarray    # (V,3) camera coords (OpenCV: x right, y down, z forward), metres
     score: float
-    params: dict = None  # Multi-HMR only: rotvec (53,3) SMPL-X joint rotations, pelvis (3,) camera coords
+    params: dict = None  # Multi-HMR: rotvec (53,3) SMPL-X joint rotations, pelvis (3,) camera coords;
+                         # SAM 3D Body: kp3d (70,3) MHR70 keypoints, camera coords
 
 
 @contextmanager

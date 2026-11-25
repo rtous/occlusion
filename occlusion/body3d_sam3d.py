@@ -51,5 +51,7 @@ class Sam3DBodyEstimator:
         import contextlib, io
         with contextlib.redirect_stdout(io.StringIO()), torch.no_grad():   # it prints a lot
             outs = self.est.process_one_image(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB), **kw)
-        bodies = [Body((o["pred_vertices"] + o["pred_cam_t"]).astype(np.float32), 1.0) for o in outs]
+        bodies = [Body((o["pred_vertices"] + o["pred_cam_t"]).astype(np.float32), 1.0,
+                       params={"kp3d": (o["pred_keypoints_3d"] + o["pred_cam_t"]).astype(np.float32)})
+                  for o in outs]
         return bodies, K

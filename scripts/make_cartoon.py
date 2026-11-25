@@ -1,16 +1,19 @@
-"""Cartoonization figure: cartoon characters (models/*.blend, SMPL-X rig) posed with the
-Multi-HMR SMPL-X parameters, rendered with Blender, and composited over the inpainted
-background with the occluded parts erased.
+"""Cartoonization figure: each person is replaced by a Mixamo character (models/*.fbx) posed with
+the SAM 3D Body keypoints, rendered with Blender, and composited over the inpainted background
+with the occluded parts erased (occlusion masks of the main method).
 
-Needs the cached outputs of run_detect.py / run_compose.py (Multi-HMR, default OCC_BODY) and
-Blender (apt-get install blender). Multi-HMR is re-run on each image to recover the pose
-parameters (the caches only keep vertices); bodies are matched to the cached ones by vertices.
+Needs the cached outputs of run_detect.py / run_compose.py (OCC_BODY=sam3d, the default) and
+Blender >= 3.0 (`--blender`). SAM 3D Body is re-run on each image with the cached person boxes
+and masks (the caches keep the vertices but not the keypoints); the new bodies are matched to
+the cached ones by their vertices.
 
-Writes paper/figures/cartoon.jpg (one row per image: original | de-occluded cartoon) and
-WORK/outputs/cartoon/<img>.png.
+Writes paper_v2/figures/cartoonization.jpg (one row per image: original | de-occluded meshes |
+de-occluded characters) and WORK/outputs/cartoon/<img>.png.
 """
 import argparse
+import glob
 import json
+import runpy
 import subprocess
 import sys
 from pathlib import Path
@@ -19,26 +22,53 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from occlusion.config import IMAGES, OUTPUTS, REPO, load_faces  # noqa: E402
-from occlusion.body3d import Body, BodyEstimator  # noqa: E402
+from occlusion.config import IMAGES, OUTPUTS, REPO, out_dir, load_faces  # noqa: E402
+from occlusion.body3d import Body  # noqa: E402
 from occlusion.render import render_all  # noqa: E402
+from occlusion.compose import compose, person_layers  # noqa: E402
 from occlusion import occlusion as occ  # noqa: E402
 
 V = "vlcsnap-2022-04-20-"
 ap = argparse.ArgumentParser()
-ap.add_argument("--images", nargs="+", default=[str(IMAGES / "oldframes" / f"{V}20h01m24s874.png"),
-                                                 str(IMAGES / "crowd" / "000000363666.jpg")])
-ap.add_argument("--models", nargs="+", default=sorted(str(p) for p in (REPO / "models").glob("*.blend")))
+ap.add_argument("--images", nargs="+", default=[str(IMAGES / "oldframes" / f"{V}{t}.png") for t in
+                                                ("20h01m24s874", "19h34m02s125", "19h56m40s250")] +
+                [str(IMAGES / "crowd" / f"{s}.jpg") for s in ("000000397354", "000000363666")])
+ap.add_argument("--models", nargs="+", default=sorted(str(p) for p in (REPO / "models").glob("*.fbx")))
 ap.add_argument("--max-side", type=int, default=1280, help="render resolution (longest side)")
 ap.add_argument("--erase-frac", type=float, default=0.03,
                 help="object-occlusion masks are dilated by this fraction of the person height, "
-                     "because the cartoon silhouette differs from the SMPL-X one")
+                     "because the character silhouette differs from the body mesh")
 ap.add_argument("--blender", default="blender")
-ap.add_argument("--out", default=str(REPO / "paper" / "figures" / "cartoon.jpg"))
+ap.add_argument("--out", default=str(REPO / "paper_v2" / "figures" / "cartoonization.jpg"))
 a = ap.parse_args()
 OUT = OUTPUTS / "cartoon"
 OUT.mkdir(parents=True, exist_ok=True)
-hmr = None
+
+
+def mhr70_names():
+    """Keypoint names of SAM 3D Body's MHR70 format, read from its metadata module."""
+    from occlusion.body3d_sam3d import SAM3D_DIR
+    for f in glob.glob(f"{SAM3D_DIR}/**/mhr70*.py", recursive=True):
+        info = runpy.run_path(f).get("pose_info", {}).get("keypoint_info")
+        if info:
+            return [info[i]["name"] for i in sorted(info)]
+    raise RuntimeError(f"MHR70 keypoint names not found under {SAM3D_DIR}")
+
+
+def joints_from_kp(kp, names):
+    """MHR70 keypoints (70,3) -> joint dict for blender_mixamo.py."""
+    ix = {n: i for i, n in enumerate(names)}
+    J = lambda *ns: np.mean([kp[ix[n]] for n in ns], 0).tolist()
+    out = dict(neck=J("neck"), head=J("left_ear", "right_ear"), l_eye=J("left_eye"), r_eye=J("right_eye"))
+    for s, side in (("l", "left"), ("r", "right")):
+        for j in ("shoulder", "elbow", "wrist", "hip", "knee", "ankle"):
+            out[f"{s}_{j}"] = J(f"{side}_{j}")
+        out[f"{s}_toe"] = J(f"{side}_big_toe", f"{side}_small_toe")
+        mid = [n for n in names if n.startswith(side) and "middle" in n]     # base = closest to the wrist
+        if mid:
+            w = kp[ix[f"{side}_wrist"]]
+            out[f"{s}_hand"] = kp[ix[min(mid, key=lambda n: np.linalg.norm(kp[ix[n]] - w))]].tolist()
+    return out
 
 
 def dilate(m, r):
@@ -46,36 +76,43 @@ def dilate(m, r):
     return cv2.dilate(m.astype(np.uint8), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))) > 0
 
 
+from occlusion.body3d_sam3d import Sam3DBodyEstimator  # noqa: E402
+est = Sam3DBodyEstimator()
+names = mhr70_names()
 rows = []
 for f in map(Path, a.images):
     img = cv2.imread(str(f))
     H, W = img.shape[:2]
-    modal = np.load(OUTPUTS / "modal" / (f.stem + ".npz"))["masks"].reshape(-1, H, W)
-    b = np.load(OUTPUTS / "body3d" / (f.stem + ".npz"))
+    m = np.load(out_dir("modal") / (f.stem + ".npz"))
+    modal = m["masks"].reshape(-1, H, W)
+    b = np.load(out_dir("body3d") / (f.stem + ".npz"))
+    faces = load_faces(b)
     bodies = [Body(v, s) for v, s in zip(b["verts"], b["scores"])]
-    depths, _ = render_all(bodies, load_faces(b), b["K"], H, W)
+    depths, _ = render_all(bodies, faces, b["K"], H, W)
     persons = occ.compute(modal, depths)
-    bg = cv2.imread(str(OUTPUTS / "compose" / (f.stem + "_bg.png")))
+    bg = cv2.imread(str(out_dir("compose") / (f.stem + "_bg.png")))
+    meshes = compose(bg, person_layers(bodies, faces, b["K"], H, W), depths, persons)
 
-    # pose parameters: re-run Multi-HMR and match to the cached bodies
-    if hmr is None:
-        hmr = BodyEstimator()
-    fresh, _ = hmr(img)
+    # keypoints: re-run SAM 3D Body with the cached prompts, match to the cached bodies
+    fresh, _ = est(img, m["boxes"], modal)
     fv = np.array([x.verts for x in fresh])
-    params = [fresh[int(np.argmin(np.abs(fv - bd.verts[None]).mean((1, 2))))].params for bd in bodies]
+    kps = []
+    for bd in bodies:
+        err = np.abs(fv - bd.verts[None]).mean((1, 2))
+        if err.min() > 0.01:
+            print(f"warning: {f.name}: cached body reproduced with a mean error of {err.min():.3f} m")
+        kps.append(fresh[int(err.argmin())].params["kp3d"])
 
     s = min(1.0, a.max_side / max(H, W))
-    w, h = round(W * s), round(H * s)
-    K = (np.diag([s, s, 1]) @ b["K"]).tolist()
-    job = dict(width=w, height=h, K=K, persons=[])
+    job = dict(width=round(W * s), height=round(H * s), K=(np.diag([s, s, 1]) @ b["K"]).tolist(), persons=[])
     for n, p in enumerate(persons):
-        q = params[p.body_idx]
-        job["persons"].append(dict(model=a.models[n % len(a.models)], rotvec=q["rotvec"].tolist(),
-                                   pelvis=q["pelvis"].tolist(), out=str(OUT / f"{f.stem}_p{n}.png")))
+        job["persons"].append(dict(model=a.models[(len(rows) + n) % len(a.models)],
+                                   joints=joints_from_kp(kps[p.body_idx], names),
+                                   out=str(OUT / f"{f.stem}_p{n}.png")))
     jf = OUT / f"{f.stem}.json"
     jf.write_text(json.dumps(job))
-    subprocess.run([a.blender, "-b", "--python", str(REPO / "scripts" / "blender_cartoon.py"), "--", str(jf)],
-                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run([a.blender, "-b", "--python", str(REPO / "scripts" / "blender_mixamo.py"), "--", str(jf)],
+                   check=True, stdout=subprocess.DEVNULL)
 
     # composite: per pixel the nearest character that is not occluded there
     out = bg.astype(np.float32)
@@ -85,29 +122,31 @@ for f in map(Path, a.images):
                           interpolation=cv2.INTER_LINEAR)
         al = rgba[..., 3].astype(np.float32) / 255
         ys = np.where(p.amodal.any(1))[0]
-        hidden = dilate(p.occ_object, a.erase_frac * (ys[-1] - ys[0] + 1)) & ~p.modal
-        al[hidden] = 0
-        d = np.where(np.isfinite(depths[p.body_idx]), depths[p.body_idx], params[p.body_idx]["pelvis"][2])
+        al[dilate(p.occ_object, a.erase_frac * (ys[-1] - ys[0] + 1)) & ~p.modal] = 0
+        al[p.occ_human & ~p.modal] = 0
+        dp = depths[p.body_idx]
+        d = np.where(np.isfinite(dp), dp, np.median(dp[np.isfinite(dp)]))   # outside the mesh: its median
         layers.append(rgba[..., :3].astype(np.float32)); alphas.append(al); dist.append(d)
     if persons:
         dist = np.where(np.array(alphas) > 0.5, np.array(dist), np.inf)
-        order = np.argsort(-np.array([np.median(d[np.isfinite(d)]) if np.isfinite(d).any() else 0 for d in dist]))
         front = dist.argmin(0)
+        none = ~np.isfinite(dist.min(0))
+        order = np.argsort([-np.median(d[np.isfinite(d)]) if np.isfinite(d).any() else 0 for d in dist])
         for n in order:                                  # far to near, nearest wins where overlapping
-            al = alphas[n] * ((front == n) | (dist.min(0) == np.inf))
+            al = alphas[n] * ((front == n) | none)
             out = out * (1 - al[..., None]) + layers[n] * al[..., None]
     out = out.clip(0, 255).astype(np.uint8)
     cv2.imwrite(str(OUT / (f.stem + ".png")), out)
-    rows.append((img, out))
+    rows.append((img, meshes, out))
     print(f.name, len(persons), "characters")
 
-hh = 360
-row_imgs = []
-for i, o in rows:
-    r = [cv2.resize(x, (round(x.shape[1] * hh / x.shape[0]), hh), interpolation=cv2.INTER_AREA) for x in (i, o)]
-    row_imgs.append(np.hstack([r[0], np.full((hh, 6, 3), 255, np.uint8), r[1]]))
-wmax = 1600
-row_imgs = [cv2.resize(r, (wmax, round(r.shape[0] * wmax / r.shape[1]))) for r in row_imgs]
-fig = np.vstack(sum([[r, np.full((6, wmax, 3), 255, np.uint8)] for r in row_imgs], [])[:-1])
+G, Wt = 6, 600                                           # tile width, as in the previous figure
+lines = []
+for tiles in rows:
+    h = round(tiles[0].shape[0] * Wt / tiles[0].shape[1])
+    t = [cv2.resize(x, (Wt, h), interpolation=cv2.INTER_AREA) for x in tiles]
+    sep = np.full((h, G, 3), 255, np.uint8)
+    lines.append(np.hstack([t[0], sep, t[1], sep, t[2]]))
+fig = np.vstack(sum([[r, np.full((G, r.shape[1], 3), 255, np.uint8)] for r in lines], [])[:-1])
 cv2.imwrite(a.out, fig, [cv2.IMWRITE_JPEG_QUALITY, 90])
 print("wrote", a.out)
