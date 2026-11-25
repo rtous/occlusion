@@ -11,7 +11,7 @@ from google.colab import drive; drive.mount('/content/drive')
 cd /content/occlusion && git pull
 bash setup_colab.sh      # deps, Multi-HMR, SAM 3D Body, Blender, weights, SMPL-X files, images (cached on Drive)
 bash run_all.sh          # optional: everything is cached on Drive, so this only regenerates figures (~minutes)
-bash paper/build.sh      # rebuild paper/main.pdf (installs TeX Live on a fresh VM, ~3 min)
+bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fresh VM, ~3 min)
 ```
 
 - The SAM 3D Body checkpoint is already cached on Drive (`weights/sam-3d-body-vith`), so no Hugging Face login is needed.
@@ -19,6 +19,25 @@ bash paper/build.sh      # rebuild paper/main.pdf (installs TeX Live on a fresh 
 - `git push` needs a token from the user (push with `https://rtous:<token>@github.com/rtous/occlusion.git`; never store it in
   the repo config). If commits could not be pushed, back them up: `git bundle create /content/drive/MyDrive/occlusion_work/occlusion_repo.bundle origin/main..main`
   and restore with `git pull <bundle> main`.
+
+## Session 3 (2026-11-25, on the user's Mac, no GPU / no Drive): cartoon figure with Mixamo characters
+
+- The user renamed `paper/` -> `paper_v1/` and started `paper_v2/` (Springer `sn-jnl` template), which a colleague edited with AI.
+  The colleague's `paper_v2/scripts/*.py` made the current Fig. 7 (`cartoonization.jpg`: original | composite | OpenCV cartoon filter
+  of the composite) by cropping existing figure JPEGs; they have hard-coded `/home/claude/...` paths and are now superseded.
+- **Goal set by the user:** Fig. 7 must show tailored 3D characters instead of the colour meshes. Characters: `models/*.fbx`
+  (drake, elisabeth, joe, remy, shae; all Mixamo rigs, bone prefixes `mixamorig:` / `mixamorig1:` / `mixamorig7:`).
+  The old SMPL-X-rigged `.blend` characters were deleted by the user.
+- Done: `scripts/blender_mixamo.py` (retargeting + EEVEE render, verified locally with Blender 5.2 on SMPL-X test poses: all 5
+  characters follow the poses; bone tails in these FBX files are arbitrary, so directions are measured between bone heads) and
+  `scripts/make_cartoon.py` (rewritten, untested: needs GPU + Drive caches).
+- **Next (Colab):** `python scripts/make_cartoon.py` (setup_colab.sh installs apt Blender). Things to check on the first run:
+  (1) MHR70 keypoint names are read from the SAM 3D Body repo (`mhr70*.py`, `pose_info["keypoint_info"]`); the code expects
+  `neck`, `left_ear`, `left_eye`, `left_shoulder`... `left_big_toe`, `left_small_toe` and a `left_..middle..` finger keypoint;
+  (2) re-running SAM 3D Body with the cached boxes/masks should reproduce the cached vertices (warning printed otherwise);
+  (3) apt Blender is old (3.x): the script avoids new APIs, but check; (4) look at the figure (character choice per person is
+  round-robin over `--models`; object-occlusion erase dilation `--erase-frac`). Then update the Fig. 7 caption in
+  `paper_v2/main.tex` (it still describes the OpenCV filter) and rebuild with `bash paper_v2/build.sh`.
 
 ## Status (2026-11-23, end of session 2): method done, paper draft complete
 
@@ -32,7 +51,7 @@ bash paper/build.sh      # rebuild paper/main.pdf (installs TeX Live on a fresh 
 | Occlusion masks | done | Hungarian matching, `occ = amodal & ~modal`, opening `open_frac` 0.02 (tuned), human/object label by depth (`occlusion/occlusion.py`) |
 | Background + composite | done | LaMa (`occlusion/inpaint.py`), per-pixel nearest non-occluded mesh (`occlusion/compose.py`) |
 | Synthetic benchmark | done | 77 images (30 clean, 26 object, 21 human), `scripts/make_synthetic_eval.py`, `scripts/eval.py` |
-| Figures | done | `scripts/make_figures.py` (COCO groups + `--name movies --intro` for movie frames / Figure 1), `scripts/make_compare.py` (Multi-HMR vs SAM 3D Body), `paper/figures/diagram.tex` |
+| Figures | done | `scripts/make_figures.py` (COCO groups + `--name movies --intro` for movie frames / Figure 1), `scripts/make_compare.py` (Multi-HMR vs SAM 3D Body), `paper_v2/figures/diagram.tex` |
 | Paper | draft complete | no `\todo` left; waiting for the user's review |
 | Cartoon figure (paper_v2 Fig. 7) | code ready, **needs a Colab run** | `scripts/make_cartoon.py`: re-runs SAM 3D Body with the cached boxes/masks to get the MHR70 3D keypoints, poses the Mixamo characters `models/*.fbx` with `scripts/blender_mixamo.py` (direction-based retargeting from joint positions, tested on the Mac with SMPL-X poses, all 5 characters OK) and composites them with the occlusion masks -> `paper_v2/figures/cartoonization.jpg` (original | meshes | characters). Run on Colab: `python scripts/make_cartoon.py --blender <blender>`; then check the figure and update its caption in `paper_v2/main.tex` |
 
@@ -70,19 +89,20 @@ Code in the repo; everything else in `/content/drive/MyDrive/occlusion_work/`:
 | `outputs/{modal,body3d,occlusion,compose,eval}` | Multi-HMR as body model (comparison) |
 | `outputs/*_sam3d_v1`, `*_sam3d_v2` | earlier SAM 3D Body runs (v1: YOLO-only detection = ablation row; v2: without `single_conf`) |
 | `outputs/*_v1` | first Multi-HMR run (single-threshold detection) |
-| `outputs/cartoon/` | cartoon renders (figure removed) |
+| `outputs/cartoon/` | character renders + job files + composites of `scripts/make_cartoon.py` |
 
 Output folders are chosen by `occlusion.config.out_dir()` from `OCC_BODY` (default `sam3d`).
 
 ## Paper (`paper_v1/` = first version, `paper_v2/` = current, Springer `sn-jnl` class, edited by a colleague)
 
-- paper_v2 build: `cd paper_v2 && pdflatex main && bibtex main && pdflatex main && pdflatex main` (diagram: `cd figures && pdflatex diagram.tex`)
+- Build: `bash paper_v2/build.sh` (pdflatex + bibtex passes; latexmk stopped early with this class). `paper_v1/` is frozen.
+- Figure scripts (`make_figures.py`, `make_compare.py`, `make_cartoon.py`) now write to `paper_v2/figures/`.
+- Sebastià Nicolau's email: sebastia.nicolauorell@gmail.com (changed in both versions).
 
 - **User decision: the old paper is unpublished; do NOT compare with it anywhere.** The movie frames are just another qualitative dataset.
 - Authors: Ruben Tous (contact, ruben.tous@upc.edu), Beatriz Otero, Sebastià Nicolau.
-- `paper/main.tex` (plain `article` class for now), `paper/references.bib`, `paper/figures/` (all generated). Build: `bash paper/build.sh`.
-- **After every change to the paper, rebuild the PDF and commit `paper/main.pdf` with the sources.**
-- Old paper text kept verbatim where still valid; **new/changed text is wrapped in `\new{...}` (blue)**, open items in `\todo{...}` (red; none left). Don't rewrite the user's kept (black) text without asking.
+- **After every change to the paper, rebuild the PDF and commit `paper_v2/main.pdf` with the sources.**
+- (paper_v1) Old paper text kept verbatim where still valid; new/changed text was wrapped in `\new{...}` (blue). Don't rewrite the authors' text without asking.
 - Content: method (SAM 3D Body, cross-model detection), Table 1 (results), Table 2 (ablation), Table 3 + pros/cons list + 2 figures
   (Multi-HMR vs SAM 3D Body), Figure 1 = bench movie frame (occlusion row + de-occlusion row), COCO groups (kitchen `397354` first;
   user rejected the baseball team `247917` and the goats `008690`), movie-frame figures, timing, related work up to 2026
@@ -90,9 +110,8 @@ Output folders are chosen by `occlusion.config.out_dir()` from `OCC_BODY` (defau
 
 ## Next steps (need the user)
 
-1. User reviews the paper draft.
-2. Target journal: move to its template; set `\showchangesfalse` in `main.tex` to print the blue text in black.
-3. Optional improvements: refine meshes to fit the modal silhouettes (main remaining error, amodal IoU ~0.8);
+1. Fig. 7 with the Mixamo characters (see Session 3 above).
+2. Optional improvements: refine meshes to fit the modal silhouettes (main remaining error, amodal IoU ~0.8);
    faster SAM 3D Body (`inference_type="body"`, skips the hand decoder).
 
 ## Environment gotchas
@@ -102,7 +121,7 @@ Output folders are chosen by `occlusion.config.out_dir()` from `OCC_BODY` (defau
 - Multi-HMR uses relative paths (`./models/...`): `occlusion/body3d.py` chdirs into `/content/third_party/multi-hmr` while loading;
   DINOv2 code comes via `torch.hub` (internet on first load). xFormers / "missing keys" / "Mask-condition inference is not supported"
   / "default FOV" messages are harmless (we pass masks and the camera ourselves).
-- Rendering is a small numpy/OpenCV rasteriser (`occlusion/render.py`), no OpenGL. Blender (cartoon scripts only) renders EEVEE via
+- Rendering is a small numpy/OpenCV rasteriser (`occlusion/render.py`), no OpenGL. Blender (cartoon figure only) renders EEVEE via
   surfaceless EGL, ~1 min per character.
 - Downloading and running binaries from the internet (e.g. the Blender tarball) was blocked by the permission system; apt packages work.
 

@@ -1,6 +1,6 @@
 """Paper figures from cached outputs (run_detect.py on the same images).
 
-Writes paper/figures/*.jpg:
+Writes paper_v2/figures/*.jpg:
   qualitative.jpg  grid on COCO group images: original | modal | amodal | occlusion
   occlusion_ex.jpg intro figure (--intro): occlusion row + de-occlusion row of the first --pick image
   modal_masks.jpg  per-person modal masks over 3 images
@@ -32,7 +32,7 @@ ap.add_argument("--pick", default="000000397354,000000363666,000000281759", help
 ap.add_argument("--intro", action="store_true", help="also write occlusion_ex.jpg from the first --pick image")
 ap.add_argument("--name", default="", help="only write <name>.jpg (occlusion grid of --qual) and "
                 "<name>_deocclusion.jpg (composites of --pick), e.g. for the movie frames")
-ap.add_argument("--out", default=str(REPO / "paper" / "figures"))
+ap.add_argument("--out", default=str(REPO / "paper_v2" / "figures"))
 a = ap.parse_args()
 FIG = Path(a.out)
 FIG.mkdir(parents=True, exist_ok=True)

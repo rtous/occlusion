@@ -1,9 +1,9 @@
 """Side-by-side comparison of the two body models (Multi-HMR vs SAM 3D Body) from cached
 outputs (run_detect.py with OCC_BODY unset and OCC_BODY=sam3d, run_compose.py for both).
 
-Writes paper/figures/compare_occlusion.jpg
+Writes paper_v2/figures/compare_occlusion.jpg
   original | Multi-HMR meshes | Multi-HMR occlusion | SAM 3D Body meshes | SAM 3D Body occlusion
-and paper/figures/compare_deocclusion.jpg
+and paper_v2/figures/compare_deocclusion.jpg
   original | Multi-HMR de-occluded | SAM 3D Body de-occluded
 """
 import argparse
@@ -27,7 +27,7 @@ DEF_DEOCC = [f"oldframes/{V}20h01m24s874.png", "crowd/000000363666.jpg", "crowd/
 ap = argparse.ArgumentParser()
 ap.add_argument("--occ", nargs="+", default=DEF_OCC, help="images (relative to WORK/images)")
 ap.add_argument("--deocc", nargs="+", default=DEF_DEOCC)
-ap.add_argument("--out", default=str(REPO / "paper" / "figures"))
+ap.add_argument("--out", default=str(REPO / "paper_v2" / "figures"))
 a = ap.parse_args()
 VARIANTS = {"multihmr": "", "sam3d": "_sam3d"}
 

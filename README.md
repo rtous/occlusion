@@ -19,7 +19,7 @@ from google.colab import drive; drive.mount('/content/drive')
 cd /content/occlusion
 bash setup_colab.sh   # once per session; everything heavy is cached on Drive
 bash run_all.sh       # all steps for both body models, resumable; then the paper figures
-bash paper/build.sh   # paper/main.pdf
+bash paper_v2/build.sh   # paper_v2/main.pdf
 ```
 
 `OCC_BODY=sam3d` (default, main method) or `OCC_BODY=multihmr` selects the body model and its output folders.
@@ -61,7 +61,7 @@ To find the parts of a person hidden behind something, we estimate the person's 
 Main method (SAM 3D Body as body model): occlusion IoU 0.49 (object occluders) / 0.53 (person occluders); only 0.6% of a non-occluded body is wrongly marked as occluded; occluder type correct for ~91% (objects) / 97% (people) of pixels. With Multi-HMR as body model: 0.39 / 0.45 and 2.1%, but ~8x faster. Details: `PROGRESS.md`, paper Tables 1-3.
 
 ### Status
-Method done; paper draft complete (`paper/main.pdf`: method, results and ablation tables, COCO and movie-frame figures, related work up to 2026).
-Next: review by the authors, journal template. Optional: refine meshes to fit the visible masks.
+Method done; paper draft complete (`paper_v2/main.pdf`, Springer template; first version in `paper_v1/`: method, results and ablation tables, COCO and movie-frame figures, related work up to 2026).
+Next: cartoonization figure with Mixamo characters (`scripts/make_cartoon.py`), review by the authors. Optional: refine meshes to fit the visible masks.
 
 Detailed, technical progress notes: `PROGRESS.md`.

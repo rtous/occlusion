@@ -16,9 +16,10 @@ python scripts/make_synthetic_eval.py || true   # M6 benchmark (exits if already
 python scripts/eval.py                          # M6 -> outputs/eval (network outputs cached per image)
 done
 export OCC_BODY=sam3d
-python scripts/make_figures.py                  # paper/figures from the crowd images
+python scripts/make_figures.py                  # paper_v2/figures from the crowd images
 V=vlcsnap-2022-04-20-
 python scripts/make_figures.py --images $I/oldframes --name movies --intro \
   --qual ${V}20h01m24s874,${V}19h34m02s125,${V}19h56m40s250,${V}20h01m01s279,${V}20h21m21s245,${V}20h01m56s515 \
-  --pick ${V}20h01m24s874,${V}19h34m02s125,${V}19h56m40s250    # paper/figures/movies*.jpg
-python scripts/make_compare.py    # paper/figures/compare_*.jpg (needs the OCC_BODY=sam3d outputs too)
+  --pick ${V}20h01m24s874,${V}19h34m02s125,${V}19h56m40s250    # paper_v2/figures/movies*.jpg
+python scripts/make_compare.py    # paper_v2/figures/compare_*.jpg (needs the OCC_BODY=sam3d outputs too)
+python scripts/make_cartoon.py    # paper_v2/figures/cartoonization.jpg (Mixamo characters models/*.fbx, needs Blender + GPU)
