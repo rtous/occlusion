@@ -165,12 +165,12 @@ Although occlusion masks are useful in various applications, in this work the ta
   \label{fig:deocclusion}
 \end{figure*}
 
-One direct application of these results is the automatic cartoonization of images and video sequences. Pictonaut \citep{tous2023} is an algorithm capable of obtaining cartoonized versions of human instances through 3D reconstruction. The challenge is to hide the parts of the cartoonized characters that are not visible in the original frame, which is precisely what the occlusion masks provide. Figure~\ref{fig:cartoonization} illustrates this application: each person is replaced by a rigged 3D character posed with the body keypoints estimated by SAM 3D Body, rendered over the inpainted background, and the occlusion masks are used to hide the parts of the characters that are occluded, so that they remain correctly hidden by the bench, the audience, the counter or the table.
+One direct application of these results is the automatic cartoonization of images and video sequences. Pictonaut \citep{tous2023} is an algorithm capable of obtaining cartoonized versions of human instances through 3D reconstruction. The challenge is to hide the parts of the cartoonized characters that are not visible in the original frame, which is precisely what the occlusion masks provide. Figure~\ref{fig:cartoonization} illustrates this use of the occlusion masks with a simple procedure of our own: each person is replaced by a rigged 3D character posed with the body keypoints estimated by SAM 3D Body, rendered over the inpainted background, and the occlusion masks are used to hide the parts of the characters that are occluded, so that they remain correctly hidden by the bench, the audience, the counter or the table.
 
 \begin{figure*}
   \centering
   \safeincludegraphics[width=\textwidth]{figures/cartoonization.jpg}
-  \caption{Application to image cartoonization. From left to right: original image, de-occluded composite (SAM 3D Body meshes over the inpainted background) and the same composite with each person replaced by a 3D character (Mixamo characters posed with the SAM 3D Body keypoints and rendered with Blender). In both composites the occluded parts are hidden with the estimated occlusion masks. The characters are assigned arbitrarily, for illustration purposes only; this is not the output of Pictonaut.}
+  \caption{Application to image cartoonization. From left to right: original image, de-occluded composite (SAM 3D Body meshes over the inpainted background) and the same composite with each person replaced by a 3D character (Mixamo characters posed with the SAM 3D Body keypoints and rendered with Blender). In both composites the occluded parts are hidden with the estimated occlusion masks. The characters are assigned arbitrarily, for illustration purposes only.}
   \label{fig:cartoonization}
 \end{figure*}
 

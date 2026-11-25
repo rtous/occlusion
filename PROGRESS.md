@@ -38,6 +38,8 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
   before it in `paper_v2/main.tex` updated; PDF rebuilt. The colleague's `paper_v2/scripts/*.py` are obsolete (could be deleted).
   Then the user added `models/kate.fbx` and `models/megan.fbx` (rig prefixes `mixamorig:` / `mixamorig2:`); at their request drake
   was replaced by kate: `--models` default is now elisabeth, joe, kate, remy, shae (megan unused, drake kept in `models/`).
+  Fig. 7 text: Pictonaut is cited as the motivating application only; the figure is described as our own simple procedure
+  (user request: keep Pictonaut references but not tied to the Fig. 7 images).
   Possible polish if the user wants: character choice per person (round-robin over `--models`), `--erase-frac`.
 
 ## Status (2026-11-23, end of session 2): method done, paper draft complete
