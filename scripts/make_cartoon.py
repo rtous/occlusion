@@ -40,6 +40,8 @@ ap.add_argument("--erase-frac", type=float, default=0.03,
                 help="object-occlusion masks are dilated by this fraction of the person height, "
                      "because the character silhouette differs from the body mesh")
 ap.add_argument("--blender", default="blender")
+ap.add_argument("--reuse-renders", action="store_true",
+                help="reuse the cached Blender character renders in WORK/outputs/cartoon (no SAM 3D Body, no Blender)")
 ap.add_argument("--no-filter", action="store_true", help="do not apply the cartoon filter to the background of the character column")
 ap.add_argument("--out", default=str(REPO / "paper_v2" / "figures" / "cartoonization.jpg"))
 a = ap.parse_args()
@@ -73,21 +75,21 @@ def joints_from_kp(kp, names):
     return out
 
 
-def cartoon(img, k=8):
-    """Non-photorealistic filter (applied to the 600-px tiles, strong enough to be visible at print size):
-    bilateral smoothing, k-means colour quantisation in Lab and adaptive-threshold ink lines."""
+def cartoon(img, k=16, w=0.6):
+    """Moderate non-photorealistic filter (applied to the 600-px tiles): bilateral smoothing, k-means colour
+    quantisation in Lab blended (weight w) with the smoothed image, and thin dark Canny edges (specks removed)."""
     s = img.copy()
-    for _ in range(4):
-        s = cv2.bilateralFilter(s, 9, 75, 75)
+    for _ in range(2):
+        s = cv2.bilateralFilter(s, 9, 50, 10)
     Z = cv2.cvtColor(s, cv2.COLOR_BGR2LAB).reshape(-1, 3).astype(np.float32)
     cv2.setRNGSeed(0)
     _, lab, cen = cv2.kmeans(Z, k, None, (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.5), 3,
                              cv2.KMEANS_PP_CENTERS)
-    q = cv2.medianBlur(cv2.cvtColor(cen.astype(np.uint8)[lab.flatten()].reshape(s.shape), cv2.COLOR_LAB2BGR), 5)
-    g = cv2.medianBlur(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 7)
-    e = (cv2.adaptiveThreshold(g, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 4) == 0).astype(np.uint8)
+    q = cv2.medianBlur(cv2.cvtColor(cen.astype(np.uint8)[lab.flatten()].reshape(s.shape), cv2.COLOR_LAB2BGR), 3)
+    q = cv2.addWeighted(q, w, s, 1 - w, 0)
+    e = cv2.Canny(cv2.GaussianBlur(cv2.cvtColor(s, cv2.COLOR_BGR2GRAY), (5, 5), 0), 60, 150)
     n, lbl, st, _ = cv2.connectedComponentsWithStats(e, 8)
-    q[np.isin(lbl, np.where(st[:, cv2.CC_STAT_AREA] >= 30)[0][1:])] = (20, 20, 20)   # drop specks
+    q[np.isin(lbl, np.where(st[:, cv2.CC_STAT_AREA] >= 40)[0][1:])] = (40, 40, 40)   # drop specks
     return q
 
 
@@ -96,9 +98,7 @@ def dilate(m, r):
     return cv2.dilate(m.astype(np.uint8), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))) > 0
 
 
-from occlusion.body3d_sam3d import Sam3DBodyEstimator  # noqa: E402
-est = Sam3DBodyEstimator()
-names = mhr70_names()
+est = names = None
 rows = []
 for f in map(Path, a.images):
     img = cv2.imread(str(f))
@@ -113,26 +113,33 @@ for f in map(Path, a.images):
     bg = cv2.imread(str(out_dir("compose") / (f.stem + "_bg.png")))
     meshes = compose(bg, person_layers(bodies, faces, b["K"], H, W), depths, persons)
 
-    # keypoints: re-run SAM 3D Body with the cached prompts, match to the cached bodies
-    fresh, _ = est(img, m["boxes"], modal)
-    fv = np.array([x.verts for x in fresh])
-    kps = []
-    for bd in bodies:
-        err = np.abs(fv - bd.verts[None]).mean((1, 2))
-        if err.min() > 0.01:
-            print(f"warning: {f.name}: cached body reproduced with a mean error of {err.min():.3f} m")
-        kps.append(fresh[int(err.argmin())].params["kp3d"])
-
-    s = min(1.0, a.max_side / max(H, W))
-    job = dict(width=round(W * s), height=round(H * s), K=(np.diag([s, s, 1]) @ b["K"]).tolist(), persons=[])
-    for n, p in enumerate(persons):
-        job["persons"].append(dict(model=a.models[(len(rows) + n) % len(a.models)],
-                                   joints=joints_from_kp(kps[p.body_idx], names),
-                                   out=str(OUT / f"{f.stem}_p{n}.png")))
     jf = OUT / f"{f.stem}.json"
-    jf.write_text(json.dumps(job))
-    subprocess.run([a.blender, "-b", "--python", str(REPO / "scripts" / "blender_mixamo.py"), "--", str(jf)],
-                   check=True, stdout=subprocess.DEVNULL)
+    if a.reuse_renders and jf.exists():
+        job = json.loads(jf.read_text())
+        assert len(job["persons"]) == len(persons), f"{f.name}: cached job does not match the cached persons"
+    else:
+        if est is None:
+            from occlusion.body3d_sam3d import Sam3DBodyEstimator
+            est, names = Sam3DBodyEstimator(), mhr70_names()
+        # keypoints: re-run SAM 3D Body with the cached prompts, match to the cached bodies
+        fresh, _ = est(img, m["boxes"], modal)
+        fv = np.array([x.verts for x in fresh])
+        kps = []
+        for bd in bodies:
+            err = np.abs(fv - bd.verts[None]).mean((1, 2))
+            if err.min() > 0.01:
+                print(f"warning: {f.name}: cached body reproduced with a mean error of {err.min():.3f} m")
+            kps.append(fresh[int(err.argmin())].params["kp3d"])
+
+        s = min(1.0, a.max_side / max(H, W))
+        job = dict(width=round(W * s), height=round(H * s), K=(np.diag([s, s, 1]) @ b["K"]).tolist(), persons=[])
+        for n, p in enumerate(persons):
+            job["persons"].append(dict(model=a.models[(len(rows) + n) % len(a.models)],
+                                       joints=joints_from_kp(kps[p.body_idx], names),
+                                       out=str(OUT / f"{f.stem}_p{n}.png")))
+        jf.write_text(json.dumps(job))
+        subprocess.run([a.blender, "-b", "--python", str(REPO / "scripts" / "blender_mixamo.py"), "--", str(jf)],
+                       check=True, stdout=subprocess.DEVNULL)
 
     # composite: per pixel the nearest character that is not occluded there
     out = bg.astype(np.float32)

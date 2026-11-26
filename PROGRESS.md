@@ -44,6 +44,9 @@ bash paper_v2/build.sh   # rebuild paper_v2/main.pdf (installs TeX Live on a fre
   request" (Code/Data availability + conclusions). The snicolau repo link for the movie-frame list is kept.
   Fig. 7 third column now gets a cartoon filter (`cartoon()` in make_cartoon.py, ported from the deleted colleague script
   cartoon2.py, then made stronger because k=24 was invisible at print size: bilateral x4, k-means k=8 in Lab, adaptive-threshold ink lines; `--no-filter` to disable); caption updated.
+- Session 5 (2026-11-26): the strong filter was too cartoonish; toned down to a moderate one (bilateral x2, k-means k=16
+  blended 60/40 with the smoothed image, thin Canny edges). New `--reuse-renders` flag rebuilds Fig. 7 from the cached
+  Blender renders on Drive without SAM 3D Body / Blender (`python scripts/make_cartoon.py --reuse-renders`).
   User request: the filter is applied to the background only (blended with the character alpha), characters stay as rendered.
   Possible polish if the user wants: character choice per person (round-robin over `--models`), `--erase-frac`.
 
